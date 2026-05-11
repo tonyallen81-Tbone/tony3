@@ -253,14 +253,41 @@ function ystrStr(){var d=new Date(_now);d.setDate(d.getDate()-1);return d.getFul
 function nowTime(){return pad(new Date().getHours())+':'+pad(new Date().getMinutes());}
 var DEFAULT_TIME='09:00';
 
-// ── Storage ─────────────────────────────────────────────────────────────────
-var _st={
-  get:function(k){try{var v=localStorage.getItem(k);return Promise.resolve(v?{value:v}:null);}catch(e){return Promise.resolve(null);}},
-  set:function(k,v){try{localStorage.setItem(k,v);}catch(e){}return Promise.resolve(null);}
+// ── Supabase config ─────────────────────────────────────────────────────────
+var SB_URL = 'https://rlvvkepcqfzbvgwefjwc.supabase.co';
+var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJsdnZrZXBjcWZ6YnZnd2VmandjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1Mjk5MTcsImV4cCI6MjA5NDEwNTkxN30.GysmV5mwbpqta9jVA9butslrfVuSfRNZewledRaMR40';
+
+function sbHeaders(){
+  return {'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY};
+}
+
+function sbGet(table,params){
+  var url=SB_URL+'/rest/v1/'+table+'?'+( params||'select=*&order=created_at.desc' );
+  return fetch(url,{headers:sbHeaders()}).then(function(r){return r.json();});
+}
+
+function sbUpsert(table,data){
+  return fetch(SB_URL+'/rest/v1/'+table,{
+    method:'POST',
+    headers:Object.assign({},sbHeaders(),{'Prefer':'resolution=merge-duplicates'}),
+    body:JSON.stringify(data)
+  });
+}
+
+function sbDelete(table,col,val){
+  return fetch(SB_URL+'/rest/v1/'+table+'?'+col+'=eq.'+encodeURIComponent(val),{
+    method:'DELETE',headers:sbHeaders()
+  });
+}
+
+// ── Local cache (localStorage) for offline/fast access ───────────────────────
+var _ls={
+  get:function(k){try{var v=localStorage.getItem(k);return v?JSON.parse(v):null;}catch(e){return null;}},
+  set:function(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
 };
 function mergeCpds(saved){
   return SEED.map(function(s){
-    var sv=saved.find(function(x){return x.id===s.id;});
+    var sv=saved?saved.find(function(x){return x.id===s.id;}):null;
     if(!sv)return Object.assign({},s);
     var m=Object.assign({},s,sv);
     m.splits=s.splits;
@@ -268,16 +295,156 @@ function mergeCpds(saved){
   });
 }
 function load(){
-  return _st.get('tony3_v1').then(function(r){
-    if(!r){
-      return _st.get('tvfr_v3').then(function(r2){if(!r2)return _st.get('tvfr_v2');return r2;}).then(function(old){
-        if(old){var d=JSON.parse(old.value);S.cpds=mergeCpds(d.cpds||[]);S.logs=d.logs||[];S.vitals=d.vitals||[];S.savedDays=d.savedDays||[];}
-        else{S.cpds=SEED.map(function(c){return Object.assign({},c);});}
-      });
-    }else{var d=JSON.parse(r.value);S.cpds=mergeCpds(d.cpds||[]);S.logs=d.logs||[];S.vitals=d.vitals||[];S.savedDays=d.savedDays||[];}
-  }).catch(function(){S.cpds=SEED.map(function(c){return Object.assign({},c);});}).then(function(){S.loaded=true;render();});
+  // Show loading state
+  S.loaded=false; render();
+
+  // Try to load from local cache first for instant display
+  var cached=_ls.get('tony3_cache');
+  if(cached){
+    S.logs=cached.logs||[];
+    S.vitals=cached.vitals||[];
+    S.savedDays=cached.savedDays||[];
+    S.cpds=mergeCpds(cached.cpds||[]);
+    S.loaded=true; render();
+  } else {
+    S.cpds=SEED.map(function(c){return Object.assign({},c);});
+  }
+
+  // Then sync from Supabase in background
+  var p1=sbGet('logs','select=*&order=date.desc,time.desc').catch(function(){return [];});
+  var p2=sbGet('vitals','select=*&order=date.desc,time.desc').catch(function(){return [];});
+  var p3=sbGet('saved_days','select=*').catch(function(){return [];});
+  var p4=sbGet('compound_overrides','select=*').catch(function(){return [];});
+
+  Promise.all([p1,p2,p3,p4]).then(function(results){
+    var logs=Array.isArray(results[0])?results[0]:[];
+    var vitals=Array.isArray(results[1])?results[1]:[];
+    var savedDays=Array.isArray(results[2])?results[2]:[];
+    var overrides=Array.isArray(results[3])?results[3]:[];
+
+    // Map Supabase rows to app format
+    S.logs=logs.map(function(r){return {
+      id:r.id,date:r.date,time:r.time,cid:r.cid,sid:r.sid||null,
+      nm:r.nm,label:r.label||null,proto:r.proto,
+      dose:r.dose!=null?Number(r.dose):null,unit:r.unit,route:r.route,
+      notes:r.notes||'',missed:!!r.missed,quick:!!r.quick,copied:!!r.copied
+    };});
+
+    S.vitals=vitals.map(function(r){return {
+      id:r.id,date:r.date,time:r.time,
+      energyYest:r.energy_yest!=null?Number(r.energy_yest):null,
+      energyCurrent:r.energy_current!=null?Number(r.energy_current):null,
+      glucose:r.glucose!=null?Number(r.glucose):null
+    };});
+
+    S.savedDays=savedDays.map(function(r){return r.date;});
+
+    // Apply compound overrides
+    var savedCpds=[];
+    overrides.forEach(function(o){
+      if(o.data)savedCpds.push(o.data);
+    });
+    S.cpds=mergeCpds(savedCpds);
+
+    // Also migrate any old localStorage data
+    try{
+      var old=localStorage.getItem('tony3_v1')||localStorage.getItem('tvfr_v3')||localStorage.getItem('tvfr_v2');
+      if(old&&S.logs.length===0){
+        var d=JSON.parse(old);
+        if(d.logs&&d.logs.length>0){
+          migrateLegacyData(d);
+          return; // migrateLegacyData calls load() again after upload
+        }
+      }
+    }catch(e){}
+
+    // Update local cache
+    _ls.set('tony3_cache',{logs:S.logs,vitals:S.vitals,savedDays:S.savedDays,cpds:savedCpds});
+    S.loaded=true; render();
+  }).catch(function(e){
+    console.error('Supabase load error:',e);
+    if(!cached){S.cpds=SEED.map(function(c){return Object.assign({},c);});}
+    S.loaded=true; render();
+  });
 }
-function save(){_st.set('tony3_v1',JSON.stringify({cpds:S.cpds,logs:S.logs,vitals:S.vitals,savedDays:S.savedDays}));}
+
+function migrateLegacyData(d){
+  var logs=d.logs||[], vitals=d.vitals||[], savedDays=d.savedDays||[];
+  var cpds=d.cpds||[];
+  // Upload all legacy logs
+  var logRows=logs.map(function(l){return {
+    id:l.id,date:l.date,time:l.time,cid:l.cid,sid:l.sid||null,
+    nm:l.nm,label:l.label||null,proto:l.proto,
+    dose:l.dose!=null?l.dose:null,unit:l.unit,route:l.route,
+    notes:l.notes||'',missed:!!l.missed,quick:!!l.quick,copied:!!l.copied
+  };});
+  var vitRows=vitals.map(function(v){return {
+    id:v.id,date:v.date,time:v.time,
+    energy_yest:v.energyYest!=null?v.energyYest:null,
+    energy_current:v.energyCurrent!=null?v.energyCurrent:null,
+    glucose:v.glucose!=null?v.glucose:null
+  };});
+  var sdRows=savedDays.map(function(d){return {date:d};});
+  var ps=[];
+  if(logRows.length)ps.push(sbUpsert('logs',logRows));
+  if(vitRows.length)ps.push(sbUpsert('vitals',vitRows));
+  if(sdRows.length)ps.push(sbUpsert('saved_days',sdRows));
+  Promise.all(ps).then(function(){
+    console.log('Legacy data migrated to Supabase');
+    load(); // reload from Supabase
+  }).catch(function(){load();});
+}
+function save(){
+  // Always update local cache instantly
+  _ls.set('tony3_cache',{logs:S.logs,vitals:S.vitals,savedDays:S.savedDays});
+}
+
+// Push a single log entry to Supabase
+function pushLog(entry){
+  var row={
+    id:entry.id,date:entry.date,time:entry.time,cid:entry.cid,sid:entry.sid||null,
+    nm:entry.nm,label:entry.label||null,proto:entry.proto,
+    dose:entry.dose!=null?entry.dose:null,unit:entry.unit,route:entry.route,
+    notes:entry.notes||'',missed:!!entry.missed,quick:!!entry.quick,copied:!!entry.copied
+  };
+  sbUpsert('logs',row).catch(function(e){console.error('pushLog error:',e);});
+}
+
+function pushLogs(entries){
+  if(!entries||!entries.length)return;
+  var rows=entries.map(function(entry){return {
+    id:entry.id,date:entry.date,time:entry.time,cid:entry.cid,sid:entry.sid||null,
+    nm:entry.nm,label:entry.label||null,proto:entry.proto,
+    dose:entry.dose!=null?entry.dose:null,unit:entry.unit,route:entry.route,
+    notes:entry.notes||'',missed:!!entry.missed,quick:!!entry.quick,copied:!!entry.copied
+  };});
+  sbUpsert('logs',rows).catch(function(e){console.error('pushLogs error:',e);});
+}
+
+function deleteLog(id){
+  sbDelete('logs','id',id).catch(function(e){console.error('deleteLog error:',e);});
+}
+
+function pushVital(v){
+  var row={id:v.id,date:v.date,time:v.time,
+    energy_yest:v.energyYest!=null?v.energyYest:null,
+    energy_current:v.energyCurrent!=null?v.energyCurrent:null,
+    glucose:v.glucose!=null?v.glucose:null};
+  sbUpsert('vitals',row).catch(function(e){console.error('pushVital error:',e);});
+}
+
+function pushSavedDay(date){
+  sbUpsert('saved_days',{date:date}).catch(function(e){console.error('pushSavedDay error:',e);});
+}
+
+function deleteSavedDay(date){
+  sbDelete('saved_days','date',date).catch(function(e){console.error('deleteSavedDay error:',e);});
+}
+
+function pushCpdOverride(c){
+  var clean=Object.assign({},c);
+  sbUpsert('compound_overrides',{id:c.id,data:clean}).catch(function(e){console.error('pushCpdOverride error:',e);});
+}
 
 // ── Log helpers ─────────────────────────────────────────────────────────────
 function tlogs(){return S.logs.filter(function(l){return l.date===TODAY.str;});}
@@ -290,18 +457,21 @@ function tlogFor(cid,sid){return tlogs().find(function(l){return l.cid===cid&&(s
 function doToggle(cid,sid){
   var d=doneCheck(cid,sid);
   if(d){
-    // Remove the log entry
+    var toRemove=S.logs.find(function(l){return l.date===TODAY.str&&l.cid===cid&&(sid?l.sid===sid:!l.sid);});
     S.logs=S.logs.filter(function(l){return !(l.date===TODAY.str&&l.cid===cid&&(sid?l.sid===sid:!l.sid));});
+    if(toRemove)deleteLog(toRemove.id);
   }else{
     var c=S.cpds.find(function(x){return x.id===cid;});
     if(!c)return;
     var split=sid&&c.splits?c.splits.find(function(s){return s.sid===sid;}):null;
-    S.logs=[{
+    var entry={
       id:'l'+Date.now(),date:TODAY.str,time:DEFAULT_TIME,
       cid:c.id,sid:sid||null,nm:c.name,label:split?split.label:null,
       proto:c.protocol,dose:split?split.dose:c.dose,unit:split?split.unit:c.unit,
       route:c.route,notes:'',missed:false,quick:true
-    }].concat(S.logs);
+    };
+    S.logs=[entry].concat(S.logs);
+    pushLog(entry);
   }
   save();render(true);
 }
@@ -317,24 +487,33 @@ function doLog(data){
   };
   if(data.editId){S.logs=S.logs.map(function(l){return l.id===data.editId?entry:l;});}
   else{S.logs=[entry].concat(S.logs);}
-  S.logging=null;save();render(true);
+  S.logging=null;save();
+  pushLog(entry);
+  render(true);
 }
 
 function doSameOne(cid,sid){
   var yl=ylogFor(cid,sid);if(!yl)return;
   S.logs=[Object.assign({},yl,{id:'l'+Date.now(),date:TODAY.str,time:DEFAULT_TIME,copied:true})].concat(S.logs);
-  save();render(true);
+  save();
+  pushLog(S.logs[0]);
+  render(true);
 }
 function doSameAll(){
   var yl=ylogs();if(!yl.length)return;
   S.logs=yl.map(function(l){return Object.assign({},l,{id:'l'+Date.now()+(Math.random()*1e6|0),date:TODAY.str,time:DEFAULT_TIME,copied:true});}).concat(S.logs);
-  S.freshStart=true;save();render(false);
+  S.freshStart=true;save();
+  pushLogs(S.logs.slice(0,yl.length));
+  render(false);
 }
 function doFreshStart(){S.freshStart=true;render(true);}
 function doSaveVitals(){
   var gEl=document.getElementById('fgv');var g=gEl?parseFloat(gEl.value):NaN;
   S.vitals=[{id:'v'+Date.now(),date:TODAY.str,time:nowTime(),energyYest:_ey,energyCurrent:_ec,glucose:isNaN(g)?null:g}].concat(S.vitals);
-  _ey=null;_ec=null;S.vitalsOpen=false;save();render(true);
+  var newVit=S.vitals[0];
+  _ey=null;_ec=null;S.vitalsOpen=false;save();
+  pushVital(newVit);
+  render(true);
 }
 function doSaveCpd(cid){
   var c=S.cpds.find(function(x){return x.id===cid;});if(!c)return;
@@ -353,7 +532,9 @@ function doSaveCpd(cid){
   if(crEl&&crEl.value)c.route=crEl.value;
   if(cnEl)c.notes=cnEl.value;
   if(csEl&&csEl.value)c.status=csEl.value;
-  S.editCpd=null;save();render(false);
+  S.editCpd=null;save();
+  pushCpdOverride(c);
+  render(false);
 }
 
 // ── Render helpers ──────────────────────────────────────────────────────────
@@ -387,11 +568,15 @@ function navHist(dir){
 function isSaved(dateStr){ return S.savedDays.indexOf(dateStr)>-1; }
 function doSaveDay(){
   if(S.savedDays.indexOf(TODAY.str)===-1) S.savedDays=[TODAY.str].concat(S.savedDays);
-  save(); render(false);
+  save();
+  pushSavedDay(TODAY.str);
+  render(false);
 }
 function doUnlockDay(){
   S.savedDays=S.savedDays.filter(function(d){return d!==TODAY.str;});
-  save(); render(false);
+  save();
+  deleteSavedDay(TODAY.str);
+  render(false);
 }
 
 // ── Render ──────────────────────────────────────────────────────────────────
@@ -414,8 +599,10 @@ function rHdr(){
     else if(c.dose!=null){total++;if(doneCheck(c.id,null))done++;}
   });
   var b=S.tab==='today'&&total?'<span class="hdr-badge">'+done+'/'+total+' active</span>':'';
+  var online=navigator.onLine;
+  var syncDot=online?'<span style="width:6px;height:6px;border-radius:50%;background:var(--tx-ok);display:inline-block;margin-left:4px" title="Synced"></span>':'<span style="width:6px;height:6px;border-radius:50%;background:var(--tx-warn);display:inline-block;margin-left:4px" title="Offline - will sync when connected"></span>';
   return '<div class="hdr"><div class="hdr-left">'
-    +'<span class="hdr-brand">Tony<span style="color:var(--tx-info);font-weight:700">\u00b3</span></span>'
+    +'<span class="hdr-brand">Tony<span style="color:var(--tx-info);font-weight:700">\u00b3</span>'+syncDot+'</span>'
     +'<span class="hdr-tag">T<span style="color:var(--tx-info);font-weight:700;font-size:17px">\u00b3</span> \u2014 longevity, performance, cognition</span>'
     +'</div>'+b+'</div>';
 }
