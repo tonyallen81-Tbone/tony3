@@ -486,8 +486,9 @@ function dRow(c){
   var bs=up?'style="border-color:'+((PMETA[c.protocol]||{}).color||'#888')+'55"':'';
 
   var saved=isSaved(TODAY.str);
+  var canToggle=!saved||(saved&&d);
   var h='<div class="dose-card'+(d?' done':'')+(up?' upcoming-item':'')+'" '+bs+'>'
-    +'<button class="chk-btn'+(d?' on':'')+(saved?' locked':'')+'" '+(saved?'disabled style="cursor:default;opacity:'+(d?'1':'0.45')+'"':'')+' data-a="'+(saved?'noop':'toggle')+'" data-id="'+c.id+'" data-sid="">'+( d?icn('check'):'' )+'</button>'
+    +'<button class="chk-btn'+(d?' on':'')+(saved&&!d?' locked':'')+'" '+(saved&&!d?'disabled style="cursor:default;opacity:0.35"':'')+' data-a="'+(canToggle?'toggle':'noop')+'" data-id="'+c.id+'" data-sid="">'+( d?icn('check'):'' )+'</button>'
     +'<div class="dose-info">'
     +'<div class="dose-nm">'+esc(c.name)+tp+'</div>'
     +'<div class="dose-sub">'+dispDose+' \u00b7 '+dispRoute+dispTime+'</div>'
@@ -516,8 +517,9 @@ function dSplitRow(c,s,up){
   var bs=up?'style="border-color:'+((PMETA[c.protocol]||{}).color||'#888')+'55"':'';
 
   var saved=isSaved(TODAY.str);
+  var canToggle=!saved||(saved&&d);
   var h='<div class="dose-card split-child'+(d?' done':'')+(up?' upcoming-item':'')+'" '+bs+'>'
-    +'<button class="chk-btn'+(d?' on':'')+(saved?' locked':'')+'" '+(saved?'disabled style="cursor:default;opacity:'+(d?'1':'0.45')+'"':'')+' data-a="'+(saved?'noop':'toggle')+'" data-id="'+c.id+'" data-sid="'+s.sid+'">'+( d?icn('check'):'' )+'</button>'
+    +'<button class="chk-btn'+(d?' on':'')+(saved&&!d?' locked':'')+'" '+(saved&&!d?'disabled style="cursor:default;opacity:0.35"':'')+' data-a="'+(canToggle?'toggle':'noop')+'" data-id="'+c.id+'" data-sid="'+s.sid+'">'+( d?icn('check'):'' )+'</button>'
     +'<div class="dose-info">'
     +'<div class="dose-nm" style="font-size:12px">'+esc(s.label)+'</div>'
     +'<div class="dose-sub">'+dispDose+dispTime+'</div>'
@@ -544,10 +546,15 @@ function rVitals(){
     if(v.glucose!=null)h+='<div class="vit-item full"><div class="vi-lbl">Fasting glucose</div><div class="vi-val">'+v.glucose+'<span style="font-size:11px;color:var(--tx3)"> mg/dL</span></div></div>';
     return h+'</div><button class="vit-upd" data-a="open-vitals">'+icn('pencil')+' Update</button></div>';
   }
+  // Pre-fill: today's saved values first, else yesterday's currentEnergy becomes today's yesterdayEnergy
   var prev=tv.length>0?tv[0]:null;
+  var pastVitals=S.vitals.filter(function(v){return v.date!==TODAY.str;}).sort(function(a,b){return b.date.localeCompare(a.date)||b.time.localeCompare(a.time);});
+  var lastPast=pastVitals.length>0?pastVitals[0]:null;
+  var preYest=prev?prev.energyYest:(lastPast?lastPast.energyCurrent:null);
+  var preCurr=prev?prev.energyCurrent:null;
   return '<div class="vit-card"><div class="vit-head"><span class="vit-title">'+icn('activity')+' Daily vitals</span></div>'
-    +'<div class="vit-fi"><label class="fl">Yesterday\'s energy</label>'+eGrid('yest',prev&&prev.energyYest)+'</div>'
-    +'<div class="vit-fi"><label class="fl">Current energy</label>'+eGrid('curr',prev&&prev.energyCurrent)+'</div>'
+    +'<div class="vit-fi"><label class="fl">Yesterday\'s energy</label>'+eGrid('yest',preYest)+'</div>'
+    +'<div class="vit-fi"><label class="fl">Current energy</label>'+eGrid('curr',preCurr)+'</div>'
     +'<div class="vit-fi"><label class="fl" for="fgv">Fasting glucose <span class="fl-opt">mg/dL \u2014 only when measured</span></label><input id="fgv" type="number" placeholder="92"></div>'
     +'<button class="btn-full" data-a="save-vitals" style="margin-top:.375rem">Save vitals</button></div>';
 }
