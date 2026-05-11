@@ -6,9 +6,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Tony³">
-<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#1c1c1e" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#2563eb">
 <title>Tony³</title>
+<link id="ati" rel="apple-touch-icon">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.30.0/dist/tabler-icons.min.css">
 <style>
 :root{--bg:#fff;--bg2:#f4f4f5;--bg-info:#eff6ff;--bg-ok:#f0fdf4;--bg-warn:#fffbeb;--bg-err:#fef2f2;--tx:#111827;--tx2:#4b5563;--tx3:#9ca3af;--tx-info:#2563eb;--tx-ok:#16a34a;--tx-warn:#d97706;--tx-err:#dc2626;--bd:rgba(0,0,0,.08);--bd2:rgba(0,0,0,.12);--bd-info:#bfdbfe;--bd-ok:#bbf7d0;--bd-warn:#fde68a;--bd-err:#fecaca;--sans:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif;--mono:'SF Mono',Menlo,'Courier New',monospace;--r:8px;--rl:12px}
@@ -70,8 +70,10 @@ textarea{resize:none}
 .dose-card.upcoming-item{border-style:dashed;background:var(--bg)}
 .dose-card.upcoming-item .dose-nm{font-style:italic;color:var(--tx2)}
 .tier-pill{display:inline-block;font-size:9px;font-weight:700;font-family:var(--mono);font-style:normal;padding:1px 4px;border-radius:3px;background:var(--bg-warn);color:var(--tx-warn);margin-left:4px;vertical-align:middle;letter-spacing:.3px}
-.chk{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--bd2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;color:transparent}
-.chk.on{background:var(--bg-ok);border-color:transparent;color:var(--tx-ok)}
+/* Toggle circle — tappable */
+.chk-btn{width:26px;height:26px;border-radius:50%;border:1.5px solid var(--bd2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;color:transparent;background:none;padding:0;transition:background .15s,border-color .15s}
+.chk-btn.on{background:var(--tx-info);border-color:var(--tx-info);color:#fff}
+.chk-btn:active{transform:scale(.9)}
 .dose-info{flex:1;min-width:0}
 .dose-nm{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .dose-sub{font-size:11px;color:var(--tx3);margin-top:1px;font-family:var(--mono)}
@@ -97,6 +99,7 @@ textarea{resize:none}
 .tag-missed{background:var(--bg-err);color:var(--tx-err)}
 .tag-same{background:var(--bg-ok);color:var(--tx-ok)}
 .tag-vitals{background:var(--bg-info);color:var(--tx-info)}
+.tag-quick{background:var(--bg-info);color:var(--tx-info)}
 .cpd-card{display:flex;align-items:flex-start;gap:.625rem;padding:.625rem .75rem;background:var(--bg2);border:.5px solid var(--bd);border-radius:var(--r);margin-bottom:.3rem}
 .cpd-card.cpd-upcoming{border-style:dashed;background:var(--bg)}
 .cpd-info{flex:1;min-width:0}
@@ -144,507 +147,420 @@ textarea{resize:none}
 </head>
 <body>
 <h1 class="sr-only">Tony³ — longevity, performance, cognition</h1>
-<div id="app"><div style="padding:3rem;text-align:center;color:#9ca3af;font-family:system-ui">Loading Tony³...</div></div>
+<div id="app"><div style="padding:3rem;text-align:center;color:#9ca3af;font-family:system-ui">Loading Tony\u00b3...</div></div>
 <script>
-const DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-const TIER_LABELS = {'Tier 1 Stack':'T1','Tier 2 Stack':'T2','Tier 3 Stack':'T3','Tier 3.5 Stack':'T3.5','Optional Stack':'OPT'};
-const PMETA = {
-  'Hormonal Stack':  {color:'#D85A30', ic:'bolt'},
-  'Peptide Stack':   {color:'#378ADD', ic:'dna-2'},
-  'Foundation':      {color:'#1D9E75', ic:'leaf'},
-  'Tier 1 Stack':    {color:'#BA7517', ic:'flask'},
-  'Tier 2 Stack':    {color:'#D4537E', ic:'barbell'},
-  'Tier 3 Stack':    {color:'#534AB7', ic:'atom-2'},
-  'Tier 3.5 Stack':  {color:'#0891B2', ic:'brain'},
-  'Optional Stack':  {color:'#7C3AED', ic:'sparkles'},
+// ── Generate blue home screen icon ─────────────────────────────────────────
+(function(){
+  try {
+    var c=document.createElement('canvas');
+    c.width=180;c.height=180;
+    var ctx=c.getContext('2d');
+    var r=22;
+    ctx.beginPath();
+    ctx.moveTo(r,0);ctx.lineTo(180-r,0);ctx.quadraticCurveTo(180,0,180,r);
+    ctx.lineTo(180,180-r);ctx.quadraticCurveTo(180,180,180-r,180);
+    ctx.lineTo(r,180);ctx.quadraticCurveTo(0,180,0,180-r);
+    ctx.lineTo(0,r);ctx.quadraticCurveTo(0,0,r,0);
+    ctx.closePath();
+    var g=ctx.createLinearGradient(0,0,180,180);
+    g.addColorStop(0,'#1d4ed8');g.addColorStop(1,'#2563eb');
+    ctx.fillStyle=g;ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.12)';
+    ctx.beginPath();ctx.arc(90,30,70,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='white';
+    ctx.font='italic bold 130px Georgia,serif';
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.shadowColor='rgba(0,0,0,0.25)';ctx.shadowBlur=8;
+    ctx.fillText('T',90,100);
+    var lnk=document.getElementById('ati');
+    lnk.href=c.toDataURL('image/png');
+  } catch(e){}
+})();
+
+// ── Data ───────────────────────────────────────────────────────────────────
+var DAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+var TIER_LABELS={'Tier 1 Stack':'T1','Tier 2 Stack':'T2','Tier 3 Stack':'T3','Tier 3.5 Stack':'T3.5','Optional Stack':'OPT'};
+var PMETA={
+  'Hormonal Stack': {color:'#D85A30',ic:'bolt'},
+  'Peptide Stack':  {color:'#378ADD',ic:'dna-2'},
+  'Foundation':     {color:'#1D9E75',ic:'leaf'},
+  'Tier 1 Stack':   {color:'#BA7517',ic:'flask'},
+  'Tier 2 Stack':   {color:'#D4537E',ic:'barbell'},
+  'Tier 3 Stack':   {color:'#534AB7',ic:'atom-2'},
+  'Tier 3.5 Stack': {color:'#0891B2',ic:'brain'},
+  'Optional Stack': {color:'#7C3AED',ic:'sparkles'},
 };
-const PORDER = ['Hormonal Stack','Peptide Stack','Foundation','Tier 1 Stack','Tier 2 Stack','Tier 3 Stack','Tier 3.5 Stack','Optional Stack'];
-const PMLIST = [
-  {name:'Hormonal Stack',  status:'ACTIVE',   start:'2026-01-01', note:'TRT 100mg/wk + HCG 3x/wk + Semaglutide 10 IU/wk. E2 normalized April 10, stable at 37.2.'},
-  {name:'Peptide Stack',   status:'ACTIVE',   start:'2026-03-01', note:'CJC-1295/Ipamorelin pre-bed. Peptide Blend (BPC-157 + TB-500 + GHK-Cu) pending dosing.'},
-  {name:'Foundation',      status:'ACTIVE',   start:'2025-01-01', note:'Core daily stack: AG1, Creatine, Vitamin D3, Fish Oil, Magnesium complex.'},
-  {name:'Tier 1 Stack',    status:'UPCOMING', start:'2026-06-01', note:'NAD+ precursor stack + metabolic support. NMN and CoQ10 may be started early as received.'},
-  {name:'Tier 2 Stack',    status:'UPCOMING', start:'2026-06-15', note:'Vascular and NO support via L-Citrulline.'},
-  {name:'Tier 3 Stack',    status:'UPCOMING', start:'2026-07-01', note:'Autophagy + senolytic support. Long-term healthspan protocol.'},
-  {name:'Tier 3.5 Stack',  status:'UPCOMING', start:'2026-08-01', note:'Advanced cognitive + mitochondrial. Alpha GPC for acetylcholine, PQQ for mitochondrial biogenesis and BDNF.'},
-  {name:'Optional Stack',  status:'UPCOMING', start:'2026-09-01', note:'Neuroinflammation + longevity compounds. Assess after Tier 3.5 signals.'},
+var PORDER=['Hormonal Stack','Peptide Stack','Foundation','Tier 1 Stack','Tier 2 Stack','Tier 3 Stack','Tier 3.5 Stack','Optional Stack'];
+var PMLIST=[
+  {name:'Hormonal Stack',  status:'ACTIVE',   start:'2026-01-01',note:'TRT 100mg/wk + HCG 3x/wk + Semaglutide 10 IU/wk. E2 normalized April 10, stable at 37.2.'},
+  {name:'Peptide Stack',   status:'ACTIVE',   start:'2026-03-01',note:'CJC-1295/Ipamorelin pre-bed. Peptide Blend (BPC-157 + TB-500 + GHK-Cu) pending dosing.'},
+  {name:'Foundation',      status:'ACTIVE',   start:'2025-01-01',note:'Core daily stack: AG1, Creatine, Vitamin D3, Fish Oil, Magnesium complex.'},
+  {name:'Tier 1 Stack',    status:'UPCOMING', start:'2026-06-01',note:'NAD+ precursor stack + metabolic support. NMN and CoQ10 may be started early as received.'},
+  {name:'Tier 2 Stack',    status:'UPCOMING', start:'2026-06-15',note:'Vascular and NO support via L-Citrulline.'},
+  {name:'Tier 3 Stack',    status:'UPCOMING', start:'2026-07-01',note:'Autophagy + senolytic support. Long-term healthspan protocol.'},
+  {name:'Tier 3.5 Stack',  status:'UPCOMING', start:'2026-08-01',note:'Advanced cognitive + mitochondrial. Alpha GPC for acetylcholine, PQQ for BDNF.'},
+  {name:'Optional Stack',  status:'UPCOMING', start:'2026-09-01',note:'Neuroinflammation + longevity compounds. Assess after Tier 3.5 signals.'},
 ];
-const SEED = [
-  {id:'c1',  name:'Testosterone Cypionate', protocol:'Hormonal Stack', dose:100,  unit:'mg',      route:'Intramuscular', freq:'Weekly',      time:'09:00', status:'ACTIVE',   start:'2026-01-01', notes:'Primary TRT dose — Saturdays'},
-  {id:'c2',  name:'HCG',                   protocol:'Hormonal Stack', dose:25,   unit:'IU',      route:'Subcutaneous',  freq:'3x/wk',       time:'08:00', status:'ACTIVE',   start:'2026-01-01', notes:'Maintains testicular function — Mon/Wed/Fri'},
-  {id:'c3',  name:'Semaglutide',            protocol:'Hormonal Stack', dose:10,   unit:'IU',      route:'Subcutaneous',  freq:'Weekly',      time:'09:00', status:'ACTIVE',   start:'2026-05-02', notes:'Dose reduction May 2 — MED-finding protocol'},
-  {id:'c4',  name:'CJC-1295 + Ipamorelin', protocol:'Peptide Stack',  dose:20,   unit:'IU',      route:'Subcutaneous',  freq:'3-4x/wk',    time:'22:00', status:'ACTIVE',   start:'2026-03-01', notes:'Pre-bed. Avoid Fri/Sat if possible.'},
-  {id:'c5',  name:'Peptide Blend (BPC-157 + TB-500 + GHK-Cu)', protocol:'Peptide Stack', dose:null, unit:'mcg', route:'Subcutaneous', freq:'TBD', time:null, status:'ACTIVE', start:null, notes:'Single combined injection. Dose/frequency TBD.'},
-  {id:'c7',  name:'NMN',                   protocol:'Tier 1 Stack',   dose:500,  unit:'mg',      route:'Oral',          freq:'Daily',       time:'08:00', status:'UPCOMING', start:'2026-06-01', notes:'AM with morning routine + fish oil. Genex brand. Start as received.'},
-  {id:'c8',  name:'Resveratrol (trans)',    protocol:'Tier 1 Stack',   dose:500,  unit:'mg',      route:'Oral',          freq:'Daily',       time:'08:00', status:'UPCOMING', start:'2026-06-01', notes:'AM with fat. Genex Power Pack.'},
-  {id:'c9',  name:'Berberine',             protocol:'Tier 1 Stack',   dose:null, unit:'mg',      route:'Oral',          freq:'3x/day',      time:null,    status:'UPCOMING', start:'2026-06-01', notes:'Genex Power Pack. AMPK activator — glucose control.',
+var SEED=[
+  {id:'c1', name:'Testosterone Cypionate',protocol:'Hormonal Stack',dose:100, unit:'mg',     route:'Intramuscular',freq:'Weekly',    time:'09:00',status:'ACTIVE',  start:'2026-01-01',notes:'Primary TRT dose — Saturdays'},
+  {id:'c2', name:'HCG',                   protocol:'Hormonal Stack',dose:25,  unit:'IU',     route:'Subcutaneous', freq:'3x/wk',    time:'08:00',status:'ACTIVE',  start:'2026-01-01',notes:'Maintains testicular function — Mon/Wed/Fri'},
+  {id:'c3', name:'Semaglutide',            protocol:'Hormonal Stack',dose:10,  unit:'IU',     route:'Subcutaneous', freq:'Weekly',   time:'09:00',status:'ACTIVE',  start:'2026-05-02',notes:'Dose reduction May 2 — MED-finding protocol'},
+  {id:'c4', name:'CJC-1295 + Ipamorelin', protocol:'Peptide Stack', dose:20,  unit:'IU',     route:'Subcutaneous', freq:'3-4x/wk', time:'22:00',status:'ACTIVE',  start:'2026-03-01',notes:'Pre-bed. Avoid Fri/Sat if possible.'},
+  {id:'c5', name:'Peptide Blend (BPC-157 + TB-500 + GHK-Cu)',protocol:'Peptide Stack',dose:null,unit:'mcg',route:'Subcutaneous',freq:'TBD',time:null,status:'ACTIVE',start:null,notes:'Single combined injection. Dose/frequency TBD.'},
+  {id:'c7', name:'NMN',                   protocol:'Tier 1 Stack',  dose:500, unit:'mg',     route:'Oral',         freq:'Daily',    time:'09:00',status:'UPCOMING',start:'2026-06-01',notes:'AM with morning routine + fish oil. Genex brand. Start as received.'},
+  {id:'c8', name:'Resveratrol (trans)',    protocol:'Tier 1 Stack',  dose:500, unit:'mg',     route:'Oral',         freq:'Daily',    time:'09:00',status:'UPCOMING',start:'2026-06-01',notes:'AM with fat. Genex Power Pack.'},
+  {id:'c9', name:'Berberine',             protocol:'Tier 1 Stack',  dose:null,unit:'mg',     route:'Oral',         freq:'3x/day',  time:null,   status:'UPCOMING',start:'2026-06-01',notes:'Genex Power Pack. AMPK activator — glucose control.',
     splits:[
-      {sid:'s9a', label:'With breakfast', dose:500, unit:'mg', time:'08:00'},
-      {sid:'s9b', label:'With lunch',     dose:500, unit:'mg', time:'13:00'},
-      {sid:'s9c', label:'With dinner',    dose:500, unit:'mg', time:'19:00'},
+      {sid:'s9a',label:'With breakfast',dose:500,unit:'mg',time:'09:00'},
+      {sid:'s9b',label:'With lunch',    dose:500,unit:'mg',time:'13:00'},
+      {sid:'s9c',label:'With dinner',   dose:500,unit:'mg',time:'19:00'},
     ]},
-  {id:'c10', name:'TMG',                   protocol:'Tier 1 Stack',   dose:2000, unit:'mg',      route:'Oral',          freq:'Daily',       time:'08:00', status:'UPCOMING', start:'2026-06-01', notes:'2 caps (1,000mg each) morning. Genex brand.'},
-  {id:'c11', name:'CoQ10 (ubiquinol)',     protocol:'Tier 1 Stack',   dose:200,  unit:'mg',      route:'Oral',          freq:'Daily',       time:'08:00', status:'UPCOMING', start:'2026-06-01', notes:'AM with fat. Life Extension. Start as received.'},
-  {id:'c12', name:'L-Citrulline',          protocol:'Tier 2 Stack',   dose:5000, unit:'mg',      route:'Oral',          freq:'Daily',       time:'08:00', status:'UPCOMING', start:'2026-06-15', notes:'5-10g morning. NOW Foods. Vascular/NO support.'},
-  {id:'c13', name:'Spermidine',            protocol:'Tier 3 Stack',   dose:1,    unit:'mg',      route:'Oral',          freq:'Daily',       time:'08:00', status:'UPCOMING', start:'2026-07-01', notes:'1-2mg/day. Life Extension. Autophagy + cardiac aging.'},
-  {id:'c14', name:'Apigenin',              protocol:'Tier 3 Stack',   dose:50,   unit:'mg',      route:'Oral',          freq:'Daily',       time:'22:00', status:'UPCOMING', start:'2026-07-01', notes:'50-100mg pre-bed. Life Extension. Senolytic + sleep + autophagy.'},
-  {id:'c21', name:'Alpha GPC',             protocol:'Tier 3.5 Stack', dose:500,  unit:'mg',      route:'Oral',          freq:'Daily',       time:'08:00', status:'UPCOMING', start:'2026-08-01', notes:'AM. Acetylcholine booster. Synergizes with Magnesium L-Threonate.'},
-  {id:'c22', name:'PQQ',                   protocol:'Tier 3.5 Stack', dose:15,   unit:'mg',      route:'Oral',          freq:'Daily',       time:'08:00', status:'UPCOMING', start:'2026-08-01', notes:'AM with food. Mitochondrial biogenesis + BDNF. Life Extension.'},
-  {id:'c23', name:'MitoPrime L-Ergothioneine', protocol:'Optional Stack', dose:10, unit:'mg',   route:'Oral',          freq:'Daily',       time:'08:00', status:'UPCOMING', start:'2026-09-01', notes:'Mitochondrial antioxidant, brain + heart. Assess after Tier 3.5.'},
-  {id:'c24', name:'Levagen+ PEA',          protocol:'Optional Stack', dose:500,  unit:'mg',      route:'Oral',          freq:'Daily',       time:'08:00', status:'UPCOMING', start:'2026-09-01', notes:'Neuroinflammation reduction. Assess after Tier 3.5.'},
-  {id:'c15', name:'AG1',                   protocol:'Foundation',     dose:1,    unit:'serving', route:'Oral',          freq:'Daily',       time:'08:00', status:'ACTIVE',   start:'2025-01-01', notes:'Daily greens/multivitamin'},
-  {id:'c16', name:'Creatine',              protocol:'Foundation',     dose:20,   unit:'g',       route:'Oral',          freq:'Daily',       time:'08:00', status:'ACTIVE',   start:'2025-01-01', notes:'20g/day split 4-5 servings. Single daily confirmation.'},
-  {id:'c17', name:'Vitamin D3',            protocol:'Foundation',     dose:5000, unit:'IU',      route:'Oral',          freq:'Daily',       time:'08:00', status:'ACTIVE',   start:'2025-01-01', notes:'5,000-10,000 IU/day. Target serum 40-60 ng/mL.'},
-  {id:'c18', name:'Fish Oil',              protocol:'Foundation',     dose:1200, unit:'mg',      route:'Oral',          freq:'Daily',       time:'08:00', status:'ACTIVE',   start:'2025-01-01', notes:'~1,200mg EPA+DHA. Fat co-factor for resveratrol + CoQ10.'},
-  {id:'c19', name:'Magnesium Glycinate',   protocol:'Foundation',     dose:1,    unit:'serving', route:'Oral',          freq:'Daily',       time:'22:00', status:'ACTIVE',   start:'2025-01-01', notes:'Evening'},
-  {id:'c20', name:'Magnesium L-Threonate', protocol:'Foundation',     dose:null, unit:'cap',     route:'Oral',          freq:'Daily split', time:null,    status:'ACTIVE',   start:'2025-01-01', notes:'Magtein. Blood-brain barrier penetration, neuroplasticity.',
+  {id:'c10',name:'TMG',                   protocol:'Tier 1 Stack',  dose:2000,unit:'mg',     route:'Oral',         freq:'Daily',    time:'09:00',status:'UPCOMING',start:'2026-06-01',notes:'2 caps (1,000mg each) morning. Genex brand.'},
+  {id:'c11',name:'CoQ10 (ubiquinol)',     protocol:'Tier 1 Stack',  dose:200, unit:'mg',     route:'Oral',         freq:'Daily',    time:'09:00',status:'UPCOMING',start:'2026-06-01',notes:'AM with fat. Life Extension. Start as received.'},
+  {id:'c12',name:'L-Citrulline',          protocol:'Tier 2 Stack',  dose:5000,unit:'mg',     route:'Oral',         freq:'Daily',    time:'09:00',status:'UPCOMING',start:'2026-06-15',notes:'5-10g morning. NOW Foods. Vascular/NO support.'},
+  {id:'c13',name:'Spermidine',            protocol:'Tier 3 Stack',  dose:1,   unit:'mg',     route:'Oral',         freq:'Daily',    time:'09:00',status:'UPCOMING',start:'2026-07-01',notes:'1-2mg/day. Life Extension. Autophagy + cardiac aging.'},
+  {id:'c14',name:'Apigenin',             protocol:'Tier 3 Stack',  dose:50,  unit:'mg',     route:'Oral',         freq:'Daily',    time:'22:00',status:'UPCOMING',start:'2026-07-01',notes:'50-100mg pre-bed. Life Extension. Senolytic + sleep.'},
+  {id:'c21',name:'Alpha GPC',             protocol:'Tier 3.5 Stack',dose:500, unit:'mg',     route:'Oral',         freq:'Daily',    time:'09:00',status:'UPCOMING',start:'2026-08-01',notes:'AM. Acetylcholine booster. Nutricost brand.'},
+  {id:'c22',name:'PQQ',                   protocol:'Tier 3.5 Stack',dose:15,  unit:'mg',     route:'Oral',         freq:'Daily',    time:'09:00',status:'UPCOMING',start:'2026-08-01',notes:'AM with food. Mitochondrial biogenesis + BDNF. Life Extension.'},
+  {id:'c23',name:'MitoPrime L-Ergothioneine',protocol:'Optional Stack',dose:10,unit:'mg',   route:'Oral',         freq:'Daily',    time:'09:00',status:'UPCOMING',start:'2026-09-01',notes:'Mitochondrial antioxidant. Assess after Tier 3.5.'},
+  {id:'c24',name:'Levagen+ PEA',          protocol:'Optional Stack',dose:500, unit:'mg',     route:'Oral',         freq:'Daily',    time:'09:00',status:'UPCOMING',start:'2026-09-01',notes:'Neuroinflammation reduction. Assess after Tier 3.5.'},
+  {id:'c15',name:'AG1',                   protocol:'Foundation',    dose:1,   unit:'serving',route:'Oral',         freq:'Daily',    time:'09:00',status:'ACTIVE',  start:'2025-01-01',notes:'Daily greens/multivitamin'},
+  {id:'c16',name:'Creatine',              protocol:'Foundation',    dose:20,  unit:'g',      route:'Oral',         freq:'Daily',    time:'09:00',status:'ACTIVE',  start:'2025-01-01',notes:'20g/day split 4-5 servings. Single daily confirmation.'},
+  {id:'c17',name:'Vitamin D3',            protocol:'Foundation',    dose:5000,unit:'IU',     route:'Oral',         freq:'Daily',    time:'09:00',status:'ACTIVE',  start:'2025-01-01',notes:'5,000-10,000 IU/day. Target serum 40-60 ng/mL.'},
+  {id:'c18',name:'Fish Oil',              protocol:'Foundation',    dose:1200,unit:'mg',     route:'Oral',         freq:'Daily',    time:'09:00',status:'ACTIVE',  start:'2025-01-01',notes:'~1,200mg EPA+DHA. Fat co-factor for resveratrol + CoQ10.'},
+  {id:'c19',name:'Magnesium Glycinate',   protocol:'Foundation',    dose:1,   unit:'serving',route:'Oral',         freq:'Daily',    time:'22:00',status:'ACTIVE',  start:'2025-01-01',notes:'Evening'},
+  {id:'c20',name:'Magnesium L-Threonate', protocol:'Foundation',    dose:null,unit:'cap',    route:'Oral',         freq:'Daily split',time:null, status:'ACTIVE',  start:'2025-01-01',notes:'Magtein. Blood-brain barrier penetration, neuroplasticity.',
     splits:[
-      {sid:'s20a', label:'Morning',  dose:1, unit:'cap', time:'08:00'},
-      {sid:'s20b', label:'Pre-bed',  dose:2, unit:'cap', time:'22:00'},
+      {sid:'s20a',label:'Morning', dose:1,unit:'cap',time:'09:00'},
+      {sid:'s20b',label:'Pre-bed', dose:2,unit:'cap',time:'22:00'},
     ]},
 ];
 
-// ── State ──────────────────────────────────────────────────────────────────
-var S = {
-  cpds: [], logs: [], vitals: [],
-  tab: 'today',
-  logging: null,   // {cid, sid, editId} — dose log form
-  editCpd: null,   // compound id — compound edit form
-  freshStart: false,
-  vitalsOpen: false,
-  loaded: false
-};
-var _ey = null, _ec = null;
+// ── State ───────────────────────────────────────────────────────────────────
+var S={cpds:[],logs:[],vitals:[],tab:'today',logging:null,editCpd:null,freshStart:false,vitalsOpen:false,loaded:false};
+var _ey=null,_ec=null;
 
-// ── Date helpers ───────────────────────────────────────────────────────────
-function pad(v) { return String(v).padStart(2,'0'); }
-var _now = new Date();
-var TODAY = {
-  str: _now.getFullYear()+'-'+pad(_now.getMonth()+1)+'-'+pad(_now.getDate()),
-  day: DAYS[_now.getDay()],
-  lbl: _now.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})
+// ── Date helpers ────────────────────────────────────────────────────────────
+function pad(v){return String(v).padStart(2,'0');}
+var _now=new Date();
+var TODAY={
+  str:_now.getFullYear()+'-'+pad(_now.getMonth()+1)+'-'+pad(_now.getDate()),
+  day:DAYS[_now.getDay()],
+  lbl:_now.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})
 };
-function ystrStr() {
-  var d = new Date(_now); d.setDate(d.getDate()-1);
-  return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
-}
-function nowTime() { return pad(new Date().getHours())+':'+pad(new Date().getMinutes()); }
+function ystrStr(){var d=new Date(_now);d.setDate(d.getDate()-1);return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
+function nowTime(){return pad(new Date().getHours())+':'+pad(new Date().getMinutes());}
+var DEFAULT_TIME='09:00';
 
-// ── Storage ────────────────────────────────────────────────────────────────
-var _st = {
-  get: function(k) {
-    try { var v=localStorage.getItem(k); return Promise.resolve(v?{value:v}:null); }
-    catch(e) { return Promise.resolve(null); }
-  },
-  set: function(k,v) {
-    try { localStorage.setItem(k,v); } catch(e) {}
-    return Promise.resolve(null);
-  }
+// ── Storage ─────────────────────────────────────────────────────────────────
+var _st={
+  get:function(k){try{var v=localStorage.getItem(k);return Promise.resolve(v?{value:v}:null);}catch(e){return Promise.resolve(null);}},
+  set:function(k,v){try{localStorage.setItem(k,v);}catch(e){}return Promise.resolve(null);}
 };
-
-function mergeCpds(saved) {
-  return SEED.map(function(s) {
-    var sv = saved.find(function(x){return x.id===s.id;});
-    if (!sv) return Object.assign({},s);
-    var merged = Object.assign({},s,sv);
-    merged.splits = s.splits; // always use seed splits structure
-    return merged;
+function mergeCpds(saved){
+  return SEED.map(function(s){
+    var sv=saved.find(function(x){return x.id===s.id;});
+    if(!sv)return Object.assign({},s);
+    var m=Object.assign({},s,sv);
+    m.splits=s.splits;
+    return m;
   });
 }
-
-function load() {
-  return _st.get('tony3_v1').then(function(r) {
-    if (!r) {
-      return _st.get('tvfr_v3').then(function(r2) {
-        if (!r2) return _st.get('tvfr_v2');
-        return r2;
-      }).then(function(old) {
-        if (old) {
-          var d = JSON.parse(old.value);
-          S.cpds = mergeCpds(d.cpds||[]);
-          S.logs = d.logs||[];
-          S.vitals = d.vitals||[];
-        } else {
-          S.cpds = SEED.map(function(c){return Object.assign({},c);});
-        }
+function load(){
+  return _st.get('tony3_v1').then(function(r){
+    if(!r){
+      return _st.get('tvfr_v3').then(function(r2){if(!r2)return _st.get('tvfr_v2');return r2;}).then(function(old){
+        if(old){var d=JSON.parse(old.value);S.cpds=mergeCpds(d.cpds||[]);S.logs=d.logs||[];S.vitals=d.vitals||[];}
+        else{S.cpds=SEED.map(function(c){return Object.assign({},c);});}
       });
-    } else {
-      var d = JSON.parse(r.value);
-      S.cpds = mergeCpds(d.cpds||[]);
-      S.logs = d.logs||[];
-      S.vitals = d.vitals||[];
-    }
-  }).catch(function() {
-    S.cpds = SEED.map(function(c){return Object.assign({},c);});
-  }).then(function() {
-    S.loaded = true;
-    render();
-  });
+    }else{var d=JSON.parse(r.value);S.cpds=mergeCpds(d.cpds||[]);S.logs=d.logs||[];S.vitals=d.vitals||[];}
+  }).catch(function(){S.cpds=SEED.map(function(c){return Object.assign({},c);});}).then(function(){S.loaded=true;render();});
+}
+function save(){_st.set('tony3_v1',JSON.stringify({cpds:S.cpds,logs:S.logs,vitals:S.vitals}));}
+
+// ── Log helpers ─────────────────────────────────────────────────────────────
+function tlogs(){return S.logs.filter(function(l){return l.date===TODAY.str;});}
+function ylogs(){return S.logs.filter(function(l){return l.date===ystrStr();});}
+function doneCheck(cid,sid){return tlogs().some(function(l){return l.cid===cid&&(sid?l.sid===sid:!l.sid);});}
+function ylogFor(cid,sid){return ylogs().find(function(l){return l.cid===cid&&(sid?l.sid===sid:!l.sid);});}
+function tlogFor(cid,sid){return tlogs().find(function(l){return l.cid===cid&&(sid?l.sid===sid:!l.sid);});}
+
+// Quick-toggle: tap circle to log/un-log instantly at default time
+function doToggle(cid,sid){
+  var d=doneCheck(cid,sid);
+  if(d){
+    // Remove the log entry
+    S.logs=S.logs.filter(function(l){return !(l.date===TODAY.str&&l.cid===cid&&(sid?l.sid===sid:!l.sid));});
+  }else{
+    var c=S.cpds.find(function(x){return x.id===cid;});
+    if(!c)return;
+    var split=sid&&c.splits?c.splits.find(function(s){return s.sid===sid;}):null;
+    S.logs=[{
+      id:'l'+Date.now(),date:TODAY.str,time:DEFAULT_TIME,
+      cid:c.id,sid:sid||null,nm:c.name,label:split?split.label:null,
+      proto:c.protocol,dose:split?split.dose:c.dose,unit:split?split.unit:c.unit,
+      route:c.route,notes:'',missed:false,quick:true
+    }].concat(S.logs);
+  }
+  save();render(true);
 }
 
-function save() {
-  _st.set('tony3_v1', JSON.stringify({cpds:S.cpds,logs:S.logs,vitals:S.vitals}));
-}
-
-// ── Log helpers ────────────────────────────────────────────────────────────
-function tlogs() { return S.logs.filter(function(l){return l.date===TODAY.str;}); }
-function ylogs() { return S.logs.filter(function(l){return l.date===ystrStr();}); }
-function doneCheck(cid,sid) {
-  return tlogs().some(function(l){return l.cid===cid&&(sid?l.sid===sid:!l.sid);});
-}
-function ylogFor(cid,sid) {
-  return ylogs().find(function(l){return l.cid===cid&&(sid?l.sid===sid:!l.sid);});
-}
-function tlogFor(cid,sid) {
-  return tlogs().find(function(l){return l.cid===cid&&(sid?l.sid===sid:!l.sid);});
-}
-
-function doLog(data) {
-  var c = S.cpds.find(function(x){return x.id===data.cid;});
-  if (!c) return;
-  var split = data.sid && c.splits ? c.splits.find(function(s){return s.sid===data.sid;}) : null;
-  var entry = {
-    id: data.editId || ('l'+Date.now()),
-    date: TODAY.str,
-    time: data.logTime || nowTime(),
-    cid: c.id, sid: data.sid||null,
-    nm: c.name, label: split?split.label:null,
-    proto: c.protocol,
-    dose: data.dose!=null ? data.dose : (split?split.dose:c.dose),
-    unit: split?split.unit:c.unit,
-    route: data.route||c.route,
-    notes: data.notes||'',
-    missed: !!data.missed
+function doLog(data){
+  var c=S.cpds.find(function(x){return x.id===data.cid;});if(!c)return;
+  var split=data.sid&&c.splits?c.splits.find(function(s){return s.sid===data.sid;}):null;
+  var entry={
+    id:data.editId||('l'+Date.now()),date:TODAY.str,time:data.logTime||DEFAULT_TIME,
+    cid:c.id,sid:data.sid||null,nm:c.name,label:split?split.label:null,
+    proto:c.protocol,dose:data.dose!=null?data.dose:(split?split.dose:c.dose),
+    unit:split?split.unit:c.unit,route:data.route||c.route,notes:data.notes||'',missed:!!data.missed
   };
-  if (data.editId) {
-    S.logs = S.logs.map(function(l){return l.id===data.editId?entry:l;});
-  } else {
-    S.logs = [entry].concat(S.logs);
-  }
-  S.logging = null;
-  save(); render(true);
+  if(data.editId){S.logs=S.logs.map(function(l){return l.id===data.editId?entry:l;});}
+  else{S.logs=[entry].concat(S.logs);}
+  S.logging=null;save();render(true);
 }
 
-function doSameOne(cid,sid) {
-  var yl = ylogFor(cid,sid);
-  if (!yl) return;
-  var entry = Object.assign({},yl,{id:'l'+Date.now(),date:TODAY.str,time:nowTime(),copied:true});
-  S.logs = [entry].concat(S.logs);
-  save(); render(true);
+function doSameOne(cid,sid){
+  var yl=ylogFor(cid,sid);if(!yl)return;
+  S.logs=[Object.assign({},yl,{id:'l'+Date.now(),date:TODAY.str,time:DEFAULT_TIME,copied:true})].concat(S.logs);
+  save();render(true);
 }
-
-function doSameAll() {
-  var yl = ylogs();
-  if (!yl.length) return;
-  var t = nowTime();
-  var copied = yl.map(function(l){
-    return Object.assign({},l,{id:'l'+Date.now()+(Math.random()*1e6|0),date:TODAY.str,time:t,copied:true});
-  });
-  S.logs = copied.concat(S.logs);
-  S.freshStart = true;
-  save(); render(false);
+function doSameAll(){
+  var yl=ylogs();if(!yl.length)return;
+  S.logs=yl.map(function(l){return Object.assign({},l,{id:'l'+Date.now()+(Math.random()*1e6|0),date:TODAY.str,time:DEFAULT_TIME,copied:true});}).concat(S.logs);
+  S.freshStart=true;save();render(false);
 }
-
-function doFreshStart() { S.freshStart=true; render(true); }
-
-function doSaveVitals() {
-  var gEl = document.getElementById('fgv');
-  var g = gEl ? parseFloat(gEl.value) : NaN;
-  S.vitals = [{
-    id:'v'+Date.now(), date:TODAY.str, time:nowTime(),
-    energyYest:_ey, energyCurrent:_ec,
-    glucose: isNaN(g)?null:g
-  }].concat(S.vitals);
-  _ey=null; _ec=null; S.vitalsOpen=false;
-  save(); render(true);
+function doFreshStart(){S.freshStart=true;render(true);}
+function doSaveVitals(){
+  var gEl=document.getElementById('fgv');var g=gEl?parseFloat(gEl.value):NaN;
+  S.vitals=[{id:'v'+Date.now(),date:TODAY.str,time:nowTime(),energyYest:_ey,energyCurrent:_ec,glucose:isNaN(g)?null:g}].concat(S.vitals);
+  _ey=null;_ec=null;S.vitalsOpen=false;save();render(true);
 }
-
-function doSaveCpd(cid) {
-  var c = S.cpds.find(function(x){return x.id===cid;});
-  if (!c) return;
-  if (c.splits) {
-    c.splits.forEach(function(s,i) {
-      var dEl=document.getElementById('sd'+i), tEl=document.getElementById('st'+i);
-      if (dEl) { var dv=parseFloat(dEl.value); if(!isNaN(dv)) s.dose=dv; }
-      if (tEl && tEl.value) s.time=tEl.value;
+function doSaveCpd(cid){
+  var c=S.cpds.find(function(x){return x.id===cid;});if(!c)return;
+  if(c.splits){
+    c.splits.forEach(function(s,i){
+      var dEl=document.getElementById('sd'+i),tEl=document.getElementById('st'+i);
+      if(dEl){var dv=parseFloat(dEl.value);if(!isNaN(dv))s.dose=dv;}
+      if(tEl&&tEl.value)s.time=tEl.value;
     });
-  } else {
-    var cdEl=document.getElementById('cd'), ctEl=document.getElementById('ct');
-    if (cdEl) { var dv=parseFloat(cdEl.value); if(!isNaN(dv)) c.dose=dv; }
-    if (ctEl && ctEl.value) c.time=ctEl.value;
+  }else{
+    var cdEl=document.getElementById('cd'),ctEl=document.getElementById('ct');
+    if(cdEl){var dv=parseFloat(cdEl.value);if(!isNaN(dv))c.dose=dv;}
+    if(ctEl&&ctEl.value)c.time=ctEl.value;
   }
-  var crEl=document.getElementById('cr'), cnEl=document.getElementById('cn'), csEl=document.getElementById('cs');
-  if (crEl && crEl.value) c.route=crEl.value;
-  if (cnEl) c.notes=cnEl.value;
-  if (csEl && csEl.value) c.status=csEl.value;
-  S.editCpd=null;
-  save(); render(false);
+  var crEl=document.getElementById('cr'),cnEl=document.getElementById('cn'),csEl=document.getElementById('cs');
+  if(crEl&&crEl.value)c.route=crEl.value;
+  if(cnEl)c.notes=cnEl.value;
+  if(csEl&&csEl.value)c.status=csEl.value;
+  S.editCpd=null;save();render(false);
 }
 
-// ── Render helpers ─────────────────────────────────────────────────────────
-function esc(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-function fmtD(s) {
-  if (!s) return '';
-  return new Date(s+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
-}
-function daysTo(s) {
-  if (!s) return 0;
-  var d=new Date(s+'T00:00:00'), n=new Date(); n.setHours(0,0,0,0);
-  return Math.max(0,Math.ceil((d-n)/86400000));
-}
-function spill(s) {
-  var m={ACTIVE:'s-active',UPCOMING:'s-upcoming',PAUSED:'s-paused',DISCONTINUED:'s-paused'};
-  return '<span class="s-tag '+(m[s]||'s-paused')+'">'+s.charAt(0)+s.slice(1).toLowerCase()+'</span>';
-}
-function icn(n) { return '<i class="ti ti-'+n+'" aria-hidden="true"></i>'; }
-function tpill(proto) {
-  var t=TIER_LABELS[proto];
-  return t?'<span class="tier-pill">'+t+'</span>':'';
-}
-function eGrid(type,pre) {
-  var v = pre || (type==='yest'?_ey:_ec);
-  var html = '<div class="e-row" data-eg="'+type+'">';
-  for (var n=1;n<=10;n++) {
-    html += '<div class="e-btn'+(v&&n<=v?' sel':'')+'" data-n="'+n+'">'+n+'</div>';
-  }
-  return html+'</div>';
+// ── Render helpers ──────────────────────────────────────────────────────────
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function fmtD(s){if(!s)return '';return new Date(s+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}
+function daysTo(s){if(!s)return 0;var d=new Date(s+'T00:00:00'),n=new Date();n.setHours(0,0,0,0);return Math.max(0,Math.ceil((d-n)/86400000));}
+function spill(s){var m={ACTIVE:'s-active',UPCOMING:'s-upcoming',PAUSED:'s-paused',DISCONTINUED:'s-paused'};return '<span class="s-tag '+(m[s]||'s-paused')+'">'+s.charAt(0)+s.slice(1).toLowerCase()+'</span>';}
+function icn(n){return '<i class="ti ti-'+n+'" aria-hidden="true"></i>';}
+function tpill(proto){var t=TIER_LABELS[proto];return t?'<span class="tier-pill">'+t+'</span>':'';}
+function eGrid(type,pre){
+  var v=pre||(type==='yest'?_ey:_ec);
+  var h='<div class="e-row" data-eg="'+type+'">';
+  for(var n=1;n<=10;n++)h+='<div class="e-btn'+(v&&n<=v?' sel':'')+'" data-n="'+n+'">'+n+'</div>';
+  return h+'</div>';
 }
 
-// ── Main render ────────────────────────────────────────────────────────────
-function render(preserveScroll) {
-  var el = document.getElementById('app');
-  if (!S.loaded) { el.innerHTML='<div style="padding:3rem;text-align:center;color:#9ca3af;font-family:system-ui">Loading Tony\u00b3...</div>'; return; }
-  var scrollY = preserveScroll ? window.scrollY : 0;
-  if (S.logging) {
-    el.innerHTML = rLogForm();
-  } else if (S.editCpd) {
-    el.innerHTML = rCpdEditForm();
-  } else {
-    el.innerHTML = rHdr()+rTabs()+rContent();
-  }
+// ── Render ──────────────────────────────────────────────────────────────────
+function render(preserveScroll){
+  var el=document.getElementById('app');
+  if(!S.loaded){el.innerHTML='<div style="padding:3rem;text-align:center;color:#9ca3af;font-family:system-ui">Loading Tony\u00b3...</div>';return;}
+  var sy=preserveScroll?window.scrollY:0;
+  if(S.logging)el.innerHTML=rLogForm();
+  else if(S.editCpd)el.innerHTML=rCpdEditForm();
+  else el.innerHTML=rHdr()+rTabs()+rContent();
   bind();
-  if (preserveScroll) requestAnimationFrame(function(){ window.scrollTo(0,scrollY); });
+  if(preserveScroll)requestAnimationFrame(function(){window.scrollTo(0,sy);});
 }
 
-function rHdr() {
+function rHdr(){
   var act=S.cpds.filter(function(c){return c.status==='ACTIVE';});
   var total=0,done=0;
   act.forEach(function(c){
     if(c.splits){c.splits.forEach(function(s){total++;if(doneCheck(c.id,s.sid))done++;});}
     else if(c.dose!=null){total++;if(doneCheck(c.id,null))done++;}
   });
-  var b = S.tab==='today'&&total ? '<span class="hdr-badge">'+done+'/'+total+' active</span>' : '';
+  var b=S.tab==='today'&&total?'<span class="hdr-badge">'+done+'/'+total+' active</span>':'';
   return '<div class="hdr"><div class="hdr-left">'
     +'<span class="hdr-brand">Tony<span style="color:var(--tx-info);font-weight:700">\u00b3</span></span>'
     +'<span class="hdr-tag">T<span style="color:var(--tx-info);font-weight:700;font-size:17px">\u00b3</span> \u2014 longevity, performance, cognition</span>'
     +'</div>'+b+'</div>';
 }
-
-function rTabs() {
-  var ts = [{id:'today',ic:'calendar-check',lb:'Today'},{id:'history',ic:'history',lb:'Log'},{id:'compounds',ic:'pill',lb:'Compounds'},{id:'protocols',ic:'stack-2',lb:'Protocols'}];
-  return '<div class="tabs">'+ts.map(function(t){
-    return '<button class="tab'+(S.tab===t.id?' on':'')+'" data-a="tab" data-v="'+t.id+'">'
-      +icn(t.ic)+'<span>'+t.lb+'</span></button>';
-  }).join('')+'</div>';
+function rTabs(){
+  var ts=[{id:'today',ic:'calendar-check',lb:'Today'},{id:'history',ic:'history',lb:'Log'},{id:'compounds',ic:'pill',lb:'Compounds'},{id:'protocols',ic:'stack-2',lb:'Protocols'}];
+  return '<div class="tabs">'+ts.map(function(t){return '<button class="tab'+(S.tab===t.id?' on':'')+'" data-a="tab" data-v="'+t.id+'">'+icn(t.ic)+'<span>'+t.lb+'</span></button>';}).join('')+'</div>';
 }
+function rContent(){if(S.tab==='today')return rToday();if(S.tab==='history')return rHistory();if(S.tab==='compounds')return rCompounds();return rProtocols();}
 
-function rContent() {
-  if (S.tab==='today')     return rToday();
-  if (S.tab==='history')   return rHistory();
-  if (S.tab==='compounds') return rCompounds();
-  return rProtocols();
-}
-
-// ── Today tab ─────────────────────────────────────────────────────────────
-function rToday() {
+function rToday(){
   var act=S.cpds.filter(function(c){return c.status==='ACTIVE';});
   var total=0,done=0;
   act.forEach(function(c){
     if(c.splits){c.splits.forEach(function(s){total++;if(doneCheck(c.id,s.sid))done++;});}
     else if(c.dose!=null){total++;if(doneCheck(c.id,null))done++;}
   });
-  var pct = total?(done/total)*100:0;
-  var yl=ylogs(), showSY=!tlogs().length&&yl.length>0&&!S.freshStart;
+  var pct=total?(done/total)*100:0;
+  var yl=ylogs(),showSY=!tlogs().length&&yl.length>0&&!S.freshStart;
   var visible=S.cpds.filter(function(c){return c.status!=='PAUSED'&&c.status!=='DISCONTINUED';});
-  var grps={};
-  visible.forEach(function(c){if(!grps[c.protocol])grps[c.protocol]=[];grps[c.protocol].push(c);});
-
-  var html = '<div class="body">';
-  html += '<div class="prog"><div class="prog-top"><span class="prog-lbl">Active protocol today</span><span class="prog-cnt">'+done+' / '+total+'</span></div>'
+  var grps={};visible.forEach(function(c){if(!grps[c.protocol])grps[c.protocol]=[];grps[c.protocol].push(c);});
+  var html='<div class="body">';
+  html+='<div class="prog"><div class="prog-top"><span class="prog-lbl">Active protocol today</span><span class="prog-cnt">'+done+' / '+total+'</span></div>'
     +'<div class="prog-track"><div class="prog-fill" style="width:'+pct+'%"></div></div>'
-    +(pct===100&&total>0?'<div class="prog-done">'+icn('check')+' All active doses confirmed</div>':'')
-    +'</div>';
-
-  if (showSY) {
-    html += '<div class="sy-card"><div class="sy-hd">'+icn('copy')+' Same as yesterday?</div>'
+    +(pct===100&&total>0?'<div class="prog-done">'+icn('check')+' All active doses confirmed</div>':'')+'</div>';
+  if(showSY){
+    html+='<div class="sy-card"><div class="sy-hd">'+icn('copy')+' Same as yesterday?</div>'
       +'<div class="sy-sub">You logged '+yl.length+' dose'+(yl.length!==1?'s':'')+' yesterday. Copy all as a starting point, then adjust anything different.</div>'
-      +'<div class="sy-btns"><button class="sy-yes" data-a="same-all">Yes, copy all</button>'
-      +'<button class="sy-no" data-a="fresh-start">No, log fresh</button></div></div>';
+      +'<div class="sy-btns"><button class="sy-yes" data-a="same-all">Yes, copy all</button><button class="sy-no" data-a="fresh-start">No, log fresh</button></div></div>';
   }
-
-  html += rVitals();
-
+  html+=rVitals();
   PORDER.forEach(function(p){
-    if (!grps[p]) return;
+    if(!grps[p])return;
     var m=PMETA[p];
-    html += '<div class="sec-hdr"><div class="sec-dot" style="background:'+m.color+'"></div>'+icn(m.ic)+' '+p+'</div>';
-    grps[p].forEach(function(c){ html += dRow(c); });
+    html+='<div class="sec-hdr"><div class="sec-dot" style="background:'+m.color+'"></div>'+icn(m.ic)+' '+p+'</div>';
+    grps[p].forEach(function(c){html+=dRow(c);});
   });
-
-  html += '</div>';
-  return html;
+  return html+'</div>';
 }
 
-function dRow(c) {
-  var up = c.status==='UPCOMING';
-  var tp = up?tpill(c.protocol):'';
-
-  if (c.splits) {
+function dRow(c){
+  var up=c.status==='UPCOMING';
+  var tp=up?tpill(c.protocol):'';
+  if(c.splits){
     var m=PMETA[c.protocol];
-    var html = '<div style="margin-bottom:.1rem">'
-      +'<div style="font-size:11px;font-weight:500;color:var(--tx2);padding:.35rem .75rem .1rem;display:flex;align-items:center;gap:.3rem'+(up?';font-style:italic':'')+'">'
+    var h='<div style="margin-bottom:.1rem"><div style="font-size:11px;font-weight:500;color:var(--tx2);padding:.35rem .75rem .1rem;display:flex;align-items:center;gap:.3rem'+(up?';font-style:italic':'')+'">'
       +'<div class="sec-dot" style="background:'+m.color+';width:5px;height:5px"></div>'+esc(c.name)+tp+'</div>';
-    c.splits.forEach(function(s){ html += dSplitRow(c,s,up); });
-    return html+'</div>';
+    c.splits.forEach(function(s){h+=dSplitRow(c,s,up);});
+    return h+'</div>';
   }
+  var d=doneCheck(c.id,null);
+  var lg=tlogFor(c.id,null);
+  var yl=ylogFor(c.id,null);
+  var loggedDose=d&&lg&&lg.dose!=null?lg.dose+lg.unit:null;
+  var expectedDose=c.dose!=null?c.dose+c.unit:'TBD';
+  var differs=d&&lg&&c.dose!=null&&String(lg.dose)!==String(c.dose);
+  var dispDose=d?loggedDose:expectedDose;
+  var dispRoute=d?lg.route:c.route;
+  var dispTime=d&&lg&&lg.time?' \u00b7 '+lg.time:(!d&&c.time?' \u00b7 '+c.time:'');
+  var bs=up?'style="border-color:'+((PMETA[c.protocol]||{}).color||'#888')+'55"':'';
 
-  var d   = doneCheck(c.id,null);
-  var lg  = tlogFor(c.id,null);
-  var yl  = ylogFor(c.id,null);
-  var loggedDose   = d&&lg&&lg.dose!=null ? lg.dose+lg.unit : null;
-  var expectedDose = c.dose!=null ? c.dose+c.unit : 'TBD';
-  var differs      = d&&lg&&c.dose!=null && String(lg.dose)!==String(c.dose);
-  var dispDose     = d ? loggedDose : expectedDose;
-  var dispRoute    = d ? lg.route : c.route;
-  var dispTime     = d&&lg&&lg.time ? ' \u00b7 '+lg.time : (!d&&c.time?' \u00b7 '+c.time:'');
-
-  var borderStyle = up ? 'style="border-color:'+((PMETA[c.protocol]||{}).color||'#888')+'55"' : '';
-  var html = '<div class="dose-card'+(d?' done':'')+(up?' upcoming-item':'')+'" '+borderStyle+'>'
-    +'<div class="chk'+(d?' on':'')+'">'+( d?icn('check'):'' )+'</div>'
+  var h='<div class="dose-card'+(d?' done':'')+(up?' upcoming-item':'')+'" '+bs+'>'
+    +'<button class="chk-btn'+(d?' on':'')+'" data-a="toggle" data-id="'+c.id+'" data-sid="">'+( d?icn('check'):'' )+'</button>'
     +'<div class="dose-info">'
     +'<div class="dose-nm">'+esc(c.name)+tp+'</div>'
     +'<div class="dose-sub">'+dispDose+' \u00b7 '+dispRoute+dispTime+'</div>'
     +(differs?'<div class="dose-delta">Expected '+expectedDose+'</div>':'')
     +(d&&lg&&lg.notes?'<div class="dose-note-txt">&ldquo;'+esc(lg.notes)+'&rdquo;</div>':'')
     +'</div>';
-
-  if (!d) {
-    html += '<div class="row-btns">'
+  if(!d){
+    h+='<div class="row-btns">'
       +(yl?'<button class="btn-same" data-a="same-one" data-id="'+c.id+'">'+icn('check')+' Same</button>':'')
-      +'<button class="btn-log" data-a="open-log" data-id="'+c.id+'">Log</button>'
-      +'</div>';
-  } else {
-    html += '<button class="btn-edit" data-a="edit-log" data-lid="'+(lg?lg.id:'')+'">'+icn('pencil')+'</button>';
+      +'<button class="btn-log" data-a="open-log" data-id="'+c.id+'">Log</button></div>';
+  }else{
+    h+='<button class="btn-edit" data-a="edit-log" data-lid="'+(lg?lg.id:'')+'">'+icn('pencil')+'</button>';
   }
-  return html+'</div>';
+  return h+'</div>';
 }
 
-function dSplitRow(c,s,up) {
-  var d   = doneCheck(c.id,s.sid);
-  var lg  = tlogFor(c.id,s.sid);
-  var yl  = ylogFor(c.id,s.sid);
-  var sLogged   = d&&lg&&lg.dose!=null ? lg.dose+lg.unit : null;
-  var sExpected = s.dose+s.unit;
-  var sDiffers  = d&&lg && String(lg.dose)!==String(s.dose);
-  var dispDose  = d ? sLogged : sExpected;
-  var dispTime  = d&&lg&&lg.time?' \u00b7 '+lg.time:(!d&&s.time?' \u00b7 '+s.time:'');
-  var borderStyle = up ? 'style="border-color:'+((PMETA[c.protocol]||{}).color||'#888')+'55"' : '';
+function dSplitRow(c,s,up){
+  var d=doneCheck(c.id,s.sid);
+  var lg=tlogFor(c.id,s.sid);
+  var yl=ylogFor(c.id,s.sid);
+  var sLogged=d&&lg&&lg.dose!=null?lg.dose+lg.unit:null;
+  var sExpected=s.dose+s.unit;
+  var sDiffers=d&&lg&&String(lg.dose)!==String(s.dose);
+  var dispDose=d?sLogged:sExpected;
+  var dispTime=d&&lg&&lg.time?' \u00b7 '+lg.time:(!d&&s.time?' \u00b7 '+s.time:'');
+  var bs=up?'style="border-color:'+((PMETA[c.protocol]||{}).color||'#888')+'55"':'';
 
-  var html = '<div class="dose-card split-child'+(d?' done':'')+(up?' upcoming-item':'')+'" '+borderStyle+'>'
-    +'<div class="chk'+(d?' on':'')+'">'+( d?icn('check'):'' )+'</div>'
+  var h='<div class="dose-card split-child'+(d?' done':'')+(up?' upcoming-item':'')+'" '+bs+'>'
+    +'<button class="chk-btn'+(d?' on':'')+'" data-a="toggle" data-id="'+c.id+'" data-sid="'+s.sid+'">'+( d?icn('check'):'' )+'</button>'
     +'<div class="dose-info">'
     +'<div class="dose-nm" style="font-size:12px">'+esc(s.label)+'</div>'
     +'<div class="dose-sub">'+dispDose+dispTime+'</div>'
     +(sDiffers?'<div class="dose-delta">Expected '+sExpected+'</div>':'')
     +(d&&lg&&lg.notes?'<div class="dose-note-txt">&ldquo;'+esc(lg.notes)+'&rdquo;</div>':'')
     +'</div>';
-
-  if (!d) {
-    html += '<div class="row-btns">'
+  if(!d){
+    h+='<div class="row-btns">'
       +(yl?'<button class="btn-same" data-a="same-split" data-id="'+c.id+'" data-sid="'+s.sid+'">'+icn('check')+' Same</button>':'')
-      +'<button class="btn-log" data-a="open-split-log" data-id="'+c.id+'" data-sid="'+s.sid+'">Log</button>'
-      +'</div>';
-  } else {
-    html += '<button class="btn-edit" data-a="edit-log" data-lid="'+(lg?lg.id:'')+'">'+icn('pencil')+'</button>';
+      +'<button class="btn-log" data-a="open-split-log" data-id="'+c.id+'" data-sid="'+s.sid+'">Log</button></div>';
+  }else{
+    h+='<button class="btn-edit" data-a="edit-log" data-lid="'+(lg?lg.id:'')+'">'+icn('pencil')+'</button>';
   }
-  return html+'</div>';
+  return h+'</div>';
 }
 
-// ── Vitals card ────────────────────────────────────────────────────────────
-function rVitals() {
-  var tv = S.vitals.filter(function(v){return v.date===TODAY.str;});
-  if (tv.length>0 && !S.vitalsOpen) {
+function rVitals(){
+  var tv=S.vitals.filter(function(v){return v.date===TODAY.str;});
+  if(tv.length>0&&!S.vitalsOpen){
     var v=tv[0];
-    var html = '<div class="vit-card"><div class="vit-head"><span class="vit-title">'+icn('activity')+' Daily vitals</span><span class="vit-ts">Logged '+v.time+'</span></div>'
-      +'<div class="vit-grid">';
-    if (v.energyYest!=null) html+='<div class="vit-item"><div class="vi-lbl">Yesterday\'s energy</div><div class="vi-val">'+v.energyYest+'<span style="font-size:11px;color:var(--tx3)">/10</span></div></div>';
-    if (v.energyCurrent!=null) html+='<div class="vit-item"><div class="vi-lbl">Current energy</div><div class="vi-val">'+v.energyCurrent+'<span style="font-size:11px;color:var(--tx3)">/10</span></div></div>';
-    if (v.glucose!=null) html+='<div class="vit-item full"><div class="vi-lbl">Fasting glucose</div><div class="vi-val">'+v.glucose+'<span style="font-size:11px;color:var(--tx3)"> mg/dL</span></div></div>';
-    html += '</div><button class="vit-upd" data-a="open-vitals">'+icn('pencil')+' Update</button></div>';
-    return html;
+    var h='<div class="vit-card"><div class="vit-head"><span class="vit-title">'+icn('activity')+' Daily vitals</span><span class="vit-ts">Logged '+v.time+'</span></div><div class="vit-grid">';
+    if(v.energyYest!=null)h+='<div class="vit-item"><div class="vi-lbl">Yesterday\'s energy</div><div class="vi-val">'+v.energyYest+'<span style="font-size:11px;color:var(--tx3)">/10</span></div></div>';
+    if(v.energyCurrent!=null)h+='<div class="vit-item"><div class="vi-lbl">Current energy</div><div class="vi-val">'+v.energyCurrent+'<span style="font-size:11px;color:var(--tx3)">/10</span></div></div>';
+    if(v.glucose!=null)h+='<div class="vit-item full"><div class="vi-lbl">Fasting glucose</div><div class="vi-val">'+v.glucose+'<span style="font-size:11px;color:var(--tx3)"> mg/dL</span></div></div>';
+    return h+'</div><button class="vit-upd" data-a="open-vitals">'+icn('pencil')+' Update</button></div>';
   }
-  var prev = tv.length>0?tv[0]:null;
+  var prev=tv.length>0?tv[0]:null;
   return '<div class="vit-card"><div class="vit-head"><span class="vit-title">'+icn('activity')+' Daily vitals</span></div>'
     +'<div class="vit-fi"><label class="fl">Yesterday\'s energy</label>'+eGrid('yest',prev&&prev.energyYest)+'</div>'
     +'<div class="vit-fi"><label class="fl">Current energy</label>'+eGrid('curr',prev&&prev.energyCurrent)+'</div>'
-    +'<div class="vit-fi"><label class="fl" for="fgv">Fasting glucose <span class="fl-opt">mg/dL \u2014 only when measured</span></label>'
-    +'<input id="fgv" type="number" placeholder="92"></div>'
+    +'<div class="vit-fi"><label class="fl" for="fgv">Fasting glucose <span class="fl-opt">mg/dL \u2014 only when measured</span></label><input id="fgv" type="number" placeholder="92"></div>'
     +'<button class="btn-full" data-a="save-vitals" style="margin-top:.375rem">Save vitals</button></div>';
 }
 
-// ── History tab ────────────────────────────────────────────────────────────
-function rHistory() {
-  var doses = S.logs.map(function(l){return Object.assign({},l,{_t:'dose'});});
-  var vits  = S.vitals.map(function(v){return Object.assign({},v,{_t:'vitals'});});
-  var all   = doses.concat(vits).sort(function(a,b){return (b.date+b.time).localeCompare(a.date+a.time);});
-  if (!all.length) return '<div class="body"><div class="empty" style="margin-top:2rem"><div class="empty-ic">'+icn('list')+'</div><div class="empty-tx">No entries yet</div><div class="empty-sb">Log doses or vitals from the Today tab.</div></div></div>';
-
-  var grps={};
-  all.forEach(function(e){if(!grps[e.date])grps[e.date]=[];grps[e.date].push(e);});
-  var html='<div class="body">';
+function rHistory(){
+  var doses=S.logs.map(function(l){return Object.assign({},l,{_t:'dose'});});
+  var vits=S.vitals.map(function(v){return Object.assign({},v,{_t:'vitals'});});
+  var all=doses.concat(vits).sort(function(a,b){return (b.date+b.time).localeCompare(a.date+a.time);});
+  if(!all.length)return '<div class="body"><div class="empty" style="margin-top:2rem"><div class="empty-ic">'+icn('list')+'</div><div class="empty-tx">No entries yet</div><div class="empty-sb">Tap any circle on Today to log.</div></div></div>';
+  var grps={};all.forEach(function(e){if(!grps[e.date])grps[e.date]=[];grps[e.date].push(e);});
+  var h='<div class="body">';
   Object.keys(grps).forEach(function(d){
-    var lbl = d===TODAY.str?'Today':new Date(d+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'});
-    html += '<div class="hist-date-lbl">'+lbl+'</div>';
+    var lbl=d===TODAY.str?'Today':new Date(d+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'});
+    h+='<div class="hist-date-lbl">'+lbl+'</div>';
     grps[d].forEach(function(e){
-      if (e._t==='vitals') {
+      if(e._t==='vitals'){
         var parts=[];
-        if (e.energyYest!=null) parts.push('Yesterday '+e.energyYest+'/10');
-        if (e.energyCurrent!=null) parts.push('Current '+e.energyCurrent+'/10');
-        html += '<div class="hist-row"><div class="hist-dot" style="background:var(--tx-info)"></div>'
-          +'<div class="hist-body"><div class="hist-head"><span class="hist-nm">Vitals snapshot<span class="tag tag-vitals">vitals</span></span><span class="hist-tm">'+e.time+'</span></div>'
+        if(e.energyYest!=null)parts.push('Yesterday '+e.energyYest+'/10');
+        if(e.energyCurrent!=null)parts.push('Current '+e.energyCurrent+'/10');
+        h+='<div class="hist-row"><div class="hist-dot" style="background:var(--tx-info)"></div><div class="hist-body">'
+          +'<div class="hist-head"><span class="hist-nm">Vitals snapshot<span class="tag tag-vitals">vitals</span></span><span class="hist-tm">'+e.time+'</span></div>'
           +(parts.length?'<div class="hist-metric">Energy \u2014 '+parts.join(' \u00b7 ')+'</div>':'')
           +(e.glucose!=null?'<div class="hist-metric">Glucose '+e.glucose+' mg/dL</div>':'')
           +'</div></div>';
-      } else {
+      }else{
         var m=(PMETA[e.proto]||{color:'#888'});
-        var nm = e.label ? esc(e.nm)+' \u00b7 '+esc(e.label) : esc(e.nm);
-        html += '<div class="hist-row"><div class="hist-dot" style="background:'+m.color+'"></div>'
-          +'<div class="hist-body"><div class="hist-head"><span class="hist-nm">'+nm+(e.copied?'<span class="tag tag-same">same</span>':'')+'</span><span class="hist-tm">'+e.time+'</span></div>'
+        var nm=e.label?esc(e.nm)+' \u00b7 '+esc(e.label):esc(e.nm);
+        h+='<div class="hist-row"><div class="hist-dot" style="background:'+m.color+'"></div><div class="hist-body">'
+          +'<div class="hist-head"><span class="hist-nm">'+nm+(e.copied?'<span class="tag tag-same">same</span>':'')+(e.quick?'<span class="tag tag-quick">quick</span>':'')+'</span><span class="hist-tm">'+e.time+'</span></div>'
           +'<div class="hist-meta">'+(e.dose!=null?e.dose+e.unit:'\u2014')+' \u00b7 '+e.route+(e.missed?'<span class="tag tag-missed">missed</span>':'')+'</div>'
           +(e.notes?'<div class="hist-note">&ldquo;'+esc(e.notes)+'&rdquo;</div>':'')
           +'</div></div>';
       }
     });
   });
-  return html+'</div>';
+  return h+'</div>';
 }
 
-// ── Compounds tab ──────────────────────────────────────────────────────────
-function rCompounds() {
-  var grps={};
-  S.cpds.forEach(function(c){if(!grps[c.protocol])grps[c.protocol]=[];grps[c.protocol].push(c);});
-  var html='<div class="body">';
+function rCompounds(){
+  var grps={};S.cpds.forEach(function(c){if(!grps[c.protocol])grps[c.protocol]=[];grps[c.protocol].push(c);});
+  var h='<div class="body">';
   PORDER.forEach(function(p){
-    if (!grps[p]) return;
+    if(!grps[p])return;
     var m=PMETA[p];
-    html += '<div class="sec-hdr"><div class="sec-dot" style="background:'+m.color+'"></div>'+icn(m.ic)+' '+p+'</div>';
+    h+='<div class="sec-hdr"><div class="sec-dot" style="background:'+m.color+'"></div>'+icn(m.ic)+' '+p+'</div>';
     grps[p].forEach(function(c){
       var up=c.status==='UPCOMING';
-      var doseTxt = c.splits ? c.splits.map(function(s){return s.dose+s.unit;}).join(' + ')+' total'
-                              : c.dose!=null?c.dose+c.unit:'TBD';
-      html += '<div class="cpd-card'+(up?' cpd-upcoming':'')+'"><div class="cpd-info">'
+      var doseTxt=c.splits?c.splits.map(function(s){return s.dose+s.unit;}).join(' + ')+' total':c.dose!=null?c.dose+c.unit:'TBD';
+      h+='<div class="cpd-card'+(up?' cpd-upcoming':'')+'"><div class="cpd-info">'
         +'<div style="display:flex;align-items:center;justify-content:space-between">'
         +'<div class="cpd-nm'+(up?' upcoming':'')+'">'+esc(c.name)+(up&&TIER_LABELS[c.protocol]?tpill(c.protocol):'')+'</div>'
         +'<button class="btn-edit" data-a="open-cpd-edit" data-id="'+c.id+'">'+icn('pencil')+'</button>'
@@ -657,85 +573,69 @@ function rCompounds() {
         +'</div>'+spill(c.status)+'</div>';
     });
   });
-  return html+'</div>';
+  return h+'</div>';
 }
 
-// ── Protocols tab ──────────────────────────────────────────────────────────
-function rProtocols() {
-  var html='<div class="body">';
+function rProtocols(){
+  var h='<div class="body">';
   PMLIST.forEach(function(p){
-    var m=PMETA[p.name], cpds=S.cpds.filter(function(c){return c.protocol===p.name;}), du=daysTo(p.start);
-    html += '<div class="proto-card"><div class="proto-head"><div>'
+    var m=PMETA[p.name],cpds=S.cpds.filter(function(c){return c.protocol===p.name;}),du=daysTo(p.start);
+    h+='<div class="proto-card"><div class="proto-head"><div>'
       +'<div style="display:flex;align-items:center;gap:.35rem"><div class="sec-dot" style="background:'+m.color+';width:8px;height:8px"></div><span class="proto-nm">'+esc(p.name)+'</span></div>'
       +'<div class="proto-since">'+(p.status==='UPCOMING'?'Starts '+fmtD(p.start)+' \u00b7 <span style="color:'+m.color+'">'+du+'d away</span>':'Since '+fmtD(p.start))+'</div>'
       +'</div>'+spill(p.status)+'</div>'
       +'<div class="proto-note">'+esc(p.note)+'</div>'
-      +'<div class="chips">'+cpds.map(function(c){
-        return '<div class="chip">'+esc(c.name)+(c.dose!=null&&!c.splits?'<span class="chip-d">'+c.dose+c.unit+'</span>':c.splits?'<span class="chip-d">split</span>':'')+'</div>';
-      }).join('')+'</div></div>';
+      +'<div class="chips">'+cpds.map(function(c){return '<div class="chip">'+esc(c.name)+(c.dose!=null&&!c.splits?'<span class="chip-d">'+c.dose+c.unit+'</span>':c.splits?'<span class="chip-d">split</span>':'')+'</div>';}).join('')+'</div></div>';
   });
-  return html+'</div>';
+  return h+'</div>';
 }
 
-// ── Compound edit form ─────────────────────────────────────────────────────
-function rCpdEditForm() {
+function rCpdEditForm(){
   var c=S.cpds.find(function(x){return x.id===S.editCpd;});
-  if (!c) return rHdr()+rTabs()+rContent();
+  if(!c)return rHdr()+rTabs()+rContent();
   var m=PMETA[c.protocol]||{color:'#888'};
-  var html = '<div><div class="form-hdr"><button class="back-btn" data-a="back-cpd">'+icn('arrow-left')+' Back</button><span class="form-title">Edit compound</span></div>'
-    +'<div class="form-body">'
-    +'<div class="form-proto" style="color:'+m.color+'">'+esc(c.protocol)+'</div>'
-    +'<div class="form-nm">'+esc(c.name)+'</div>';
-  if (c.splits) {
-    html += '<div style="margin-bottom:.75rem;padding:.625rem;background:var(--bg2);border-radius:var(--r);font-size:12px;color:var(--tx2)">Split dosing \u2014 edit each entry below</div>';
+  var h='<div><div class="form-hdr"><button class="back-btn" data-a="back-cpd">'+icn('arrow-left')+' Back</button><span class="form-title">Edit compound</span></div>'
+    +'<div class="form-body"><div class="form-proto" style="color:'+m.color+'">'+esc(c.protocol)+'</div><div class="form-nm">'+esc(c.name)+'</div>';
+  if(c.splits){
+    h+='<div style="margin-bottom:.75rem;padding:.625rem;background:var(--bg2);border-radius:var(--r);font-size:12px;color:var(--tx2)">Split dosing \u2014 edit each entry below</div>';
     c.splits.forEach(function(s,i){
-      html += '<div class="split-edit-box"><div class="split-edit-label">'+esc(s.label)+'</div>'
-        +'<div class="split-edit-row">'
-        +'<div style="position:relative;flex:1"><input type="number" step="any" id="sd'+i+'" value="'+(s.dose!=null?s.dose:'')+'" placeholder="dose" style="padding-right:36px">'
+      h+='<div class="split-edit-box"><div class="split-edit-label">'+esc(s.label)+'</div>'
+        +'<div class="split-edit-row"><div style="position:relative;flex:1"><input type="number" step="any" id="sd'+i+'" value="'+(s.dose!=null?s.dose:'')+'" placeholder="dose" style="padding-right:36px">'
         +'<span style="position:absolute;right:9px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--tx3);pointer-events:none;font-family:var(--mono)">'+s.unit+'</span></div>'
-        +'<input type="time" id="st'+i+'" value="'+(s.time||'')+'" style="flex:1">'
-        +'</div></div>';
+        +'<input type="time" id="st'+i+'" value="'+(s.time||'')+'" style="flex:1"></div></div>';
     });
-  } else {
-    html += '<div class="fi"><label class="fl" for="cd">Default dose</label>'
-      +'<div class="inp-u"><input id="cd" type="number" step="any" value="'+(c.dose!=null?c.dose:'')+'" placeholder="amount">'
-      +'<span class="u-lbl">'+c.unit+'</span></div></div>'
-      +'<div class="fi"><label class="fl" for="ct">Scheduled time</label>'
-      +'<input id="ct" type="time" value="'+(c.time||'')+'"></div>';
+  }else{
+    h+='<div class="fi"><label class="fl" for="cd">Default dose</label>'
+      +'<div class="inp-u"><input id="cd" type="number" step="any" value="'+(c.dose!=null?c.dose:'')+'" placeholder="amount"><span class="u-lbl">'+c.unit+'</span></div></div>'
+      +'<div class="fi"><label class="fl" for="ct">Scheduled time</label><input id="ct" type="time" value="'+(c.time||'')+'"></div>';
   }
-  html += '<div class="fi"><label class="fl" for="cr">Route</label><select id="cr">'
-    +['Oral','Subcutaneous','Intramuscular','IV','Topical'].map(function(r){return '<option'+(r===c.route?' selected':'')+'>'+r+'</option>';}).join('')
-    +'</select></div>'
+  h+='<div class="fi"><label class="fl" for="cr">Route</label><select id="cr">'
+    +['Oral','Subcutaneous','Intramuscular','IV','Topical'].map(function(r){return '<option'+(r===c.route?' selected':'')+'>'+r+'</option>';}).join('')+'</select></div>'
     +'<div class="fi"><label class="fl" for="cn">Notes</label><textarea id="cn" style="height:64px">'+esc(c.notes||'')+'</textarea></div>'
     +'<div class="fi"><label class="fl" for="cs">Status</label><select id="cs">'
-    +['ACTIVE','UPCOMING','PAUSED','DISCONTINUED'].map(function(s){return '<option'+(s===c.status?' selected':'')+'>'+s+'</option>';}).join('')
-    +'</select></div>'
-    +'<button class="btn-full" data-a="save-cpd" data-id="'+c.id+'">Save changes</button>'
-    +'</div></div>';
-  return html;
+    +['ACTIVE','UPCOMING','PAUSED','DISCONTINUED'].map(function(s){return '<option'+(s===c.status?' selected':'')+'>'+s+'</option>';}).join('')+'</select></div>'
+    +'<button class="btn-full" data-a="save-cpd" data-id="'+c.id+'">Save changes</button></div></div>';
+  return h;
 }
 
-// ── Dose log form ──────────────────────────────────────────────────────────
-function rLogForm() {
-  var cid=S.logging.cid, sid=S.logging.sid, editId=S.logging.editId;
+function rLogForm(){
+  var cid=S.logging.cid,sid=S.logging.sid,editId=S.logging.editId;
   var c=S.cpds.find(function(x){return x.id===cid;});
-  if (!c) return rHdr()+rTabs()+rContent();
+  if(!c)return rHdr()+rTabs()+rContent();
   var m=PMETA[c.protocol]||{color:'#888'};
-  var split = sid&&c.splits ? c.splits.find(function(s){return s.sid===sid;}) : null;
-  var existing = editId ? S.logs.find(function(l){return l.id===editId;}) : null;
-  var yl = !editId ? (sid?ylogFor(cid,sid):ylogFor(cid,null)) : null;
-  var prefill = existing||yl;
-  var defDose  = prefill&&prefill.dose!=null ? prefill.dose : (split?split.dose:c.dose);
-  var defRoute = prefill ? prefill.route : c.route;
-  var defNotes = prefill ? prefill.notes : '';
-  var defTime  = existing ? existing.time : nowTime();
-  var defMissed = existing ? existing.missed : false;
-  var subLbl = split ? esc(split.label)+' \u00b7 '+split.dose+split.unit : (c.dose!=null?c.dose+c.unit:'Enter dose below');
-
+  var split=sid&&c.splits?c.splits.find(function(s){return s.sid===sid;}):null;
+  var existing=editId?S.logs.find(function(l){return l.id===editId;}):null;
+  var yl=!editId?(sid?ylogFor(cid,sid):ylogFor(cid,null)):null;
+  var prefill=existing||yl;
+  var defDose=prefill&&prefill.dose!=null?prefill.dose:(split?split.dose:c.dose);
+  var defRoute=prefill?prefill.route:c.route;
+  var defNotes=prefill?prefill.notes:'';
+  var defTime=existing?existing.time:DEFAULT_TIME;
+  var defMissed=existing?existing.missed:false;
+  var subLbl=split?esc(split.label)+' \u00b7 '+split.dose+split.unit:(c.dose!=null?c.dose+c.unit:'Enter dose below');
   return '<div><div class="form-hdr"><button class="back-btn" data-a="back">'+icn('arrow-left')+' Back</button>'
     +'<span class="form-title">'+(editId?'Edit dose':'Log dose')+'</span></div>'
-    +'<div class="form-body">'
-    +'<div class="form-proto" style="color:'+m.color+'">'+esc(c.protocol)+'</div>'
+    +'<div class="form-body"><div class="form-proto" style="color:'+m.color+'">'+esc(c.protocol)+'</div>'
     +'<div class="form-nm">'+esc(c.name)+'</div>'
     +'<div class="form-sub">'+subLbl+' \u00b7 '+c.route+'</div>'
     +'<div class="fi"><label class="fl" for="ft">Time taken</label><input id="ft" type="time" value="'+defTime+'"></div>'
@@ -743,78 +643,49 @@ function rLogForm() {
     +'<div class="inp-u"><input id="fd" type="number" step="any" value="'+(defDose!=null?defDose:'')+'" placeholder="amount">'
     +'<span class="u-lbl">'+(split?split.unit:c.unit)+'</span></div></div>'
     +'<div class="fi"><label class="fl" for="fr">Route</label><select id="fr">'
-    +['Oral','Subcutaneous','Intramuscular','IV','Topical'].map(function(r){return '<option'+(r===defRoute?' selected':'')+'>'+r+'</option>';}).join('')
-    +'</select></div>'
+    +['Oral','Subcutaneous','Intramuscular','IV','Topical'].map(function(r){return '<option'+(r===defRoute?' selected':'')+'>'+r+'</option>';}).join('')+'</select></div>'
     +'<div class="fi"><label class="fl" for="fn">Notes <span class="fl-opt">(optional)</span></label>'
     +'<textarea id="fn" style="height:72px" placeholder="Observations, side effects, pain level...">'+(defNotes?esc(defNotes):'')+'</textarea></div>'
-    +'<label class="miss-row"><input id="fm" type="checkbox"'+(defMissed?' checked':'')+'> <span>Mark as missed dose</span></label>'
+    +'<label class="miss-row"><input id="fm" type="checkbox"'+(defMissed?' checked':'')+'>  <span>Mark as missed dose</span></label>'
     +'<button class="btn-full" data-a="submit" data-id="'+cid+'" data-sid="'+(sid||'')+'" data-eid="'+(editId||'')+'">'
-    +(editId?'Save changes':'Confirm dose logged')+'</button>'
-    +'</div></div>';
+    +(editId?'Save changes':'Confirm dose logged')+'</button></div></div>';
 }
 
-// ── Event binding ──────────────────────────────────────────────────────────
-function bind() {
-  document.querySelectorAll('[data-a]').forEach(function(el){
-    el.addEventListener('click', onClick);
-  });
+// ── Event binding ───────────────────────────────────────────────────────────
+function bind(){
+  document.querySelectorAll('[data-a]').forEach(function(el){el.addEventListener('click',onClick);});
   document.querySelectorAll('[data-eg] .e-btn').forEach(function(b){
-    b.addEventListener('click', function(){
-      var type = b.closest('[data-eg]').dataset.eg;
-      var val  = +b.dataset.n;
-      if (type==='yest') _ey=val;
-      else               _ec=val;
-      b.closest('[data-eg]').querySelectorAll('.e-btn').forEach(function(x){
-        x.classList.toggle('sel', +x.dataset.n<=val);
-      });
+    b.addEventListener('click',function(){
+      var type=b.closest('[data-eg]').dataset.eg,val=+b.dataset.n;
+      if(type==='yest')_ey=val;else _ec=val;
+      b.closest('[data-eg]').querySelectorAll('.e-btn').forEach(function(x){x.classList.toggle('sel',+x.dataset.n<=val);});
     });
   });
 }
 
-function onClick(e) {
-  var a   = e.currentTarget.dataset.a;
-  var cid = e.currentTarget.dataset.id;
-  var sid = e.currentTarget.dataset.sid;
-  var lid = e.currentTarget.dataset.lid;
-  var eid = e.currentTarget.dataset.eid;
-
-  if (a==='tab')            { S.tab=e.currentTarget.dataset.v; render(false); }
-  else if (a==='open-log')  { S.logging={cid:cid,sid:null,editId:null}; render(false); }
-  else if (a==='open-split-log') { S.logging={cid:cid,sid:sid,editId:null}; render(false); }
-  else if (a==='edit-log')  {
-    var lg=S.logs.find(function(l){return l.id===lid;});
-    if (lg) S.logging={cid:lg.cid,sid:lg.sid||null,editId:lg.id};
-    render(false);
-  }
-  else if (a==='back')      { S.logging=null; render(false); }
-  else if (a==='same-one')  { doSameOne(cid,null); }
-  else if (a==='same-split'){ doSameOne(cid,sid); }
-  else if (a==='same-all')  { doSameAll(); }
-  else if (a==='fresh-start'){ doFreshStart(); }
-  else if (a==='open-vitals'){
-    var tv=S.vitals.filter(function(v){return v.date===TODAY.str;});
-    if (tv.length){ _ey=tv[0].energyYest; _ec=tv[0].energyCurrent; }
-    S.vitalsOpen=true; render(true);
-  }
-  else if (a==='save-vitals'){ doSaveVitals(); }
-  else if (a==='open-cpd-edit'){ S.editCpd=cid; render(false); }
-  else if (a==='back-cpd')  { S.editCpd=null; render(false); }
-  else if (a==='save-cpd')  { doSaveCpd(cid); }
-  else if (a==='submit') {
+function onClick(e){
+  var el=e.currentTarget;
+  var a=el.dataset.a,cid=el.dataset.id,sid=el.dataset.sid,lid=el.dataset.lid,eid=el.dataset.eid;
+  if(a==='tab'){S.tab=el.dataset.v;render(false);}
+  else if(a==='toggle'){doToggle(cid,sid||null);}
+  else if(a==='open-log'){S.logging={cid:cid,sid:null,editId:null};render(false);}
+  else if(a==='open-split-log'){S.logging={cid:cid,sid:sid,editId:null};render(false);}
+  else if(a==='edit-log'){var lg=S.logs.find(function(l){return l.id===lid;});if(lg)S.logging={cid:lg.cid,sid:lg.sid||null,editId:lg.id};render(false);}
+  else if(a==='back'){S.logging=null;render(false);}
+  else if(a==='same-one'){doSameOne(cid,null);}
+  else if(a==='same-split'){doSameOne(cid,sid);}
+  else if(a==='same-all'){doSameAll();}
+  else if(a==='fresh-start'){doFreshStart();}
+  else if(a==='open-vitals'){var tv=S.vitals.filter(function(v){return v.date===TODAY.str;});if(tv.length){_ey=tv[0].energyYest;_ec=tv[0].energyCurrent;}S.vitalsOpen=true;render(true);}
+  else if(a==='save-vitals'){doSaveVitals();}
+  else if(a==='open-cpd-edit'){S.editCpd=cid;render(false);}
+  else if(a==='back-cpd'){S.editCpd=null;render(false);}
+  else if(a==='save-cpd'){doSaveCpd(cid);}
+  else if(a==='submit'){
     e.stopPropagation();
-    var ftEl=document.getElementById('ft');
-    var fdEl=document.getElementById('fd');
+    var ftEl=document.getElementById('ft'),fdEl=document.getElementById('fd');
     var dose=fdEl?parseFloat(fdEl.value):NaN;
-    doLog({
-      cid:  cid,
-      sid:  sid||null,
-      editId: eid||null,
-      logTime: ftEl?ftEl.value:nowTime(),
-      dose: isNaN(dose)?null:dose,
-      route: (document.getElementById('fr')||{}).value,
-      notes: (document.getElementById('fn')||{}).value,
-      missed: !!(document.getElementById('fm')||{}).checked
-    });
+    doLog({cid:cid,sid:sid||null,editId:eid||null,logTime:ftEl?ftEl.value:DEFAULT_TIME,dose:isNaN(dose)?null:dose,route:(document.getElementById('fr')||{}).value,notes:(document.getElementById('fn')||{}).value,missed:!!(document.getElementById('fm')||{}).checked});
   }
 }
 
