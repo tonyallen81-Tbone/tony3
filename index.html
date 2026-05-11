@@ -675,6 +675,25 @@ function rCpdEditForm(){
   return h;
 }
 
+
+function rCpdInfo(cid){
+  var info=CPD_INFO[cid];
+  if(!info)return "";
+  var h="";
+  h+="<div style='background:var(--bg2);border:.5px solid var(--bd);border-radius:var(--r);padding:.75rem;margin-bottom:.875rem'>";
+  h+="<div style='font-weight:600;color:var(--tx);margin-bottom:.5rem;font-size:12px;line-height:1.5'>"+esc(info.what)+"</div>";
+  h+="<div style='margin-bottom:.5rem'>";
+  h+="<div style='font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--tx-info);margin-bottom:2px'>WHY IT IS HERE</div>";
+  h+="<div style='font-size:12px;color:var(--tx2);line-height:1.6'>"+esc(info.why)+"</div></div>";
+  h+="<div style='margin-bottom:.5rem'>";
+  h+="<div style='font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--tx-ok);margin-bottom:2px'>WHAT TO WATCH</div>";
+  h+="<div style='font-size:12px;color:var(--tx2);line-height:1.6'>"+esc(info.watch)+"</div></div>";
+  h+="<div><div style='font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--tx-warn);margin-bottom:2px'>TIMING</div>";
+  h+="<div style='font-size:12px;color:var(--tx2);line-height:1.6'>"+esc(info.timing)+"</div></div>";
+  h+="</div>";
+  return h;
+}
+
 function rLogForm(){
   var cid=S.logging.cid,sid=S.logging.sid,editId=S.logging.editId;
   var c=S.cpds.find(function(x){return x.id===cid;});
@@ -695,6 +714,7 @@ function rLogForm(){
     +'<div class="form-body"><div class="form-proto" style="color:'+m.color+'">'+esc(c.protocol)+'</div>'
     +'<div class="form-nm">'+esc(c.name)+'</div>'
     +'<div class="form-sub">'+subLbl+' \u00b7 '+c.route+'</div>'
+    +rCpdInfo(c.id)
     +'<div class="fi"><label class="fl" for="ft">Time taken</label><input id="ft" type="time" value="'+defTime+'"></div>'
     +'<div class="fi"><label class="fl" for="fd">Dose administered</label>'
     +'<div class="inp-u"><input id="fd" type="number" step="any" value="'+(defDose!=null?defDose:'')+'" placeholder="amount">'
@@ -750,6 +770,147 @@ function onClick(e){
     doLog({cid:cid,sid:sid||null,editId:eid||null,logTime:ftEl?ftEl.value:DEFAULT_TIME,dose:isNaN(dose)?null:dose,route:(document.getElementById('fr')||{}).value,notes:(document.getElementById('fn')||{}).value,missed:!!(document.getElementById('fm')||{}).checked});
   }
 }
+
+var CPD_INFO = {
+  'c1':{
+    what:'Testosterone Cypionate — injectable androgen. Primary male sex hormone.',
+    why:'Your foundation. Restores testosterone to optimal range, supporting muscle mass, energy, libido, cognitive clarity, and mood. Combined with HCG to maintain testicular function while on exogenous testosterone.',
+    watch:'Total and free testosterone labs. E2 (estradiol) — TRT raises both T and E2, E2 control is critical. Hematocrit (TRT raises RBC count). WHOOP HRV and recovery trend upward when dialed in.',
+    timing:'Saturday 9am IM injection. Consistent day and time matters for stable hormone levels.'
+  },
+  'c2':{
+    what:'HCG (Human Chorionic Gonadotropin) — peptide hormone that mimics LH.',
+    why:'TRT suppresses your natural LH signal, causing testicular atrophy. HCG keeps the testes active, maintains intratesticular testosterone, and supports mood and libido beyond what exogenous T alone provides.',
+    watch:'Testicular volume (subjective). E2 — HCG also stimulates estrogen, monitor if E2 creeps up. Labs: LH suppressed (expected on TRT) but testicular function maintained.',
+    timing:'Mon/Wed/Fri subcutaneous injection. Small dose 3x/week mimics natural LH pulsatility.'
+  },
+  'c3':{
+    what:'Semaglutide — GLP-1 receptor agonist. Originally a diabetes drug, now used for metabolic health and weight management.',
+    why:'You are on a minimum effective dose (MED) protocol at 10 IU/week. GLP-1 agonists reduce appetite, improve insulin sensitivity, protect neurons via GLP-1 receptors in the brain, and reduce systemic inflammation. Your fasting glucose baseline of 96 mg/dL makes metabolic optimization a priority.',
+    watch:'Fasting glucose (target below 90 mg/dL). Body fat % on Withings (target 14% or lower). WHOOP recovery — if it drops sharply, dose may be too high. HbA1c at June labs (target 5.6% or lower).',
+    timing:'Saturday 9am subcutaneous. Same day as TRT for simplicity. Currently finding your MED — do not adjust without tracking glucose response first.'
+  },
+  'c4':{
+    what:'CJC-1295 + Ipamorelin — growth hormone secretagogue blend. Stimulates natural GH release from the pituitary.',
+    why:'GH declines with age. This peptide blend stimulates your pituitary to release GH naturally, improving deep sleep, recovery, body composition, and longevity markers. Unlike direct GH injection, this preserves your own pituitary feedback loop. Running 20 IU per injection as a longevity protocol.',
+    watch:'WHOOP deep sleep minutes — most sensitive signal. Recovery % trend. Body fat % (GH is lipolytic). IGF-1 on labs is a direct measure — add to June labs.',
+    timing:'Pre-bed subcutaneous. GH is naturally released in pulses during sleep — this amplifies that pulse. Avoid Fri/Sat if possible.'
+  },
+  'c5':{
+    what:'Peptide Blend: BPC-157 + TB-500 + GHK-Cu — tissue repair and regeneration peptides.',
+    why:'BPC-157 accelerates healing of tendons, ligaments, gut lining, and muscle. TB-500 promotes cell migration and tissue repair systemically. GHK-Cu stimulates collagen, reduces inflammation, and has potent anti-aging effects on skin and connective tissue. Combined, these address your hamstring recovery and support long-term structural health.',
+    watch:'Subjective: hamstring pain and mobility. Recovery time from training. Skin quality (GHK-Cu). No standard lab marker — this is feel and function.',
+    timing:'Dose and frequency TBD. Typically subcutaneous near injury site or systemic. Log when you establish your protocol.'
+  },
+  'c7':{
+    what:'NMN (Nicotinamide Mononucleotide) — NAD+ precursor. Directly converts to NAD+ in cells.',
+    why:'NAD+ declines roughly 50% by age 50. It is essential for mitochondrial energy production, DNA repair, and sirtuin activation (your longevity enzymes). Dr. Sinclair identifies NAD+ restoration as one of the most evidence-backed anti-aging interventions. At 500mg/day you are at the upper end of studied doses.',
+    watch:'WHOOP HRV (NAD supports autonomic nervous system health). Energy levels — subjective but reliable. Fasting glucose (NAD improves insulin sensitivity). Withings vascular age over 8-12 weeks.',
+    timing:'Morning with fish oil. Fat improves absorption. Take with resveratrol — they are synergistic.'
+  },
+  'c8':{
+    what:'Resveratrol (trans) — polyphenol stilbene found in red wine. Sirtuin activator.',
+    why:'Activates SIRT1, your primary longevity enzyme. Synergistic with NMN: NMN raises NAD+, resveratrol activates the enzymes that use it. Evidence supports vascular protection, anti-inflammatory effects, and cognitive aging benefits. Trans-resveratrol is the bioavailable form.',
+    watch:'Withings vascular age (target below 47). WHOOP HRV trend. Fasting glucose (mild insulin-sensitizing effect). Best validated as part of the full NAD stack.',
+    timing:'Morning with fat — resveratrol absorption requires a fat co-factor. Take with fish oil and CoQ10.'
+  },
+  'c9':{
+    what:'Berberine — plant alkaloid from barberry. AMPK activator. Often called nature\'s metformin.',
+    why:'Your fasting glucose of 96 mg/dL and HbA1c of 5.8% put you in pre-diabetic territory, driven partly by CJC-1295 raising glucose. Berberine activates AMPK (same pathway as metformin), improving insulin sensitivity and reducing hepatic glucose output. At 1,500mg/day split with meals it is your most direct glucose intervention.',
+    watch:'Fasting glucose (primary signal — target below 90 mg/dL). HbA1c at June labs (target 5.6% or lower). GI side effects common in week 1 — resolves.',
+    timing:'Split 500mg with each meal. Must be taken with food to reduce GI side effects and improve efficacy by blunting postprandial glucose spikes.'
+  },
+  'c10':{
+    what:'TMG (Trimethylglycine / Betaine) — methyl donor. Supports methylation and NAD+ recycling.',
+    why:'NMN raises NAD+ but this consumes methyl groups in the process. Without replenishment, homocysteine can rise (cardiovascular risk). TMG donates methyl groups preventing this depletion and supporting the NAD+ salvage pathway. Also independently supports cardiovascular health and liver function.',
+    watch:'Homocysteine on labs (target below 10 umol/L — add to June labs). Energy levels (methylation affects neurotransmitter synthesis). This is a support compound with no dramatic standalone signal.',
+    timing:'Morning with your main stack. Flexible timing, no fat requirement.'
+  },
+  'c11':{
+    what:'CoQ10 (Ubiquinol) — mitochondrial electron carrier and antioxidant. Ubiquinol is the active reduced form.',
+    why:'CoQ10 declines with age and is essential for mitochondrial ATP production — every cell that generates energy needs it. Critical for cardiac muscle and vascular endothelium. Directly targets your vascular age goal. TRT creates mild oxidative stress, making antioxidant support important.',
+    watch:'Withings vascular age (primary signal — target 47 or below). PWV (pulse wave velocity). Subjective energy and exercise recovery. Blood pressure trend.',
+    timing:'Morning with fat — ubiquinol is fat-soluble. Take with fish oil and resveratrol.'
+  },
+  'c12':{
+    what:'L-Citrulline — amino acid that converts to arginine in the kidneys, boosting nitric oxide production.',
+    why:'Nitric oxide relaxes blood vessel walls, improving endothelial function and reducing arterial stiffness. Directly targets your PWV (currently 7.5 m/s, target below 7.0) and vascular age. More effective than arginine supplementation because it bypasses first-pass metabolism. Also supports exercise performance.',
+    watch:'Withings vascular age (target 47 or below). PWV trend. Blood pressure (should trend lower). Exercise performance and pumps. Effect visible in 4-8 weeks.',
+    timing:'Morning. Can be taken fasted or with food. Start at 5g and increase to 10g if tolerated.'
+  },
+  'c13':{
+    what:'Spermidine — polyamine compound found in wheat germ. Autophagy inducer.',
+    why:'Autophagy is your cellular self-cleaning process — it declines with age allowing damaged proteins and organelles to accumulate. Spermidine is one of the most studied autophagy inducers with human longevity data. Higher spermidine intake correlates with reduced cardiovascular mortality. Synergizes with your fasting protocol.',
+    watch:'Long-term signal — cardiac health markers, vascular age, inflammation. Subjective: cognitive clarity and energy. Best validated alongside fasting (both induce autophagy via different pathways).',
+    timing:'Morning. Add July after NAD stack and fasting protocol are established.'
+  },
+  'c14':{
+    what:'Apigenin — flavonoid found in chamomile and parsley. Senolytic and sleep compound.',
+    why:'Dual purpose: (1) Inhibits CD38, an enzyme that degrades NAD+ — so apigenin preserves the NAD+ your NMN creates. (2) Senolytic activity — helps clear senescent zombie cells that secrete inflammatory signals and accelerate aging. Also binds GABA receptors promoting sleep quality.',
+    watch:'WHOOP sleep performance and deep sleep minutes. HRV (senolytic effect reduces inflammatory burden on autonomic system). Works synergistically with NMN — hard to isolate independently.',
+    timing:'Pre-bed. Takes 4-8 weeks for senolytic effects to accumulate. Pairs with your pre-bed magnesium routine.'
+  },
+  'c21':{
+    what:'Alpha GPC — choline compound that crosses the blood-brain barrier. Acetylcholine precursor.',
+    why:'Acetylcholine is your primary learning and memory neurotransmitter — it declines with age. Alpha GPC directly raises brain acetylcholine levels, supporting neuroplasticity, memory consolidation, and cognitive speed. You mentioned your brain is speeding up — Alpha GPC accelerates this further. Synergizes with Magnesium L-Threonate.',
+    watch:'Subjective cognitive performance — memory, focus, word recall, processing speed. WHOOP sleep quality (acetylcholine active during REM). Rapid onset, effects felt within hours to days.',
+    timing:'Morning. Add August after Tier 3 signals are assessed.'
+  },
+  'c22':{
+    what:'PQQ (Pyrroloquinoline Quinone) — redox cofactor and mitochondrial biogenesis trigger.',
+    why:'PQQ activates PGC-1alpha, the master regulator of mitochondrial biogenesis — it stimulates creation of new mitochondria. Distinct from CoQ10 which supports existing mitochondria. Also upregulates BDNF (brain-derived neurotrophic factor) responsible for neuroplasticity and learning.',
+    watch:'Subjective energy and mental clarity. WHOOP HRV (mitochondrial health affects autonomic tone). Works over 4-8 weeks — not an immediate effect.',
+    timing:'Morning with food. Add August alongside Alpha GPC.'
+  },
+  'c23':{
+    what:'MitoPrime L-Ergothioneine — rare amino acid antioxidant synthesized only by fungi. Concentrated in brain, liver, kidney, and heart.',
+    why:'Humans have a dedicated transporter for ergothioneine suggesting evolutionary importance for longevity. Accumulates in mitochondria-rich tissues. Higher blood levels correlate with reduced mortality and cardiovascular disease in observational studies. Supports NADH restoration and protects against oxidative damage.',
+    watch:'Long-term signal — cardiovascular markers, vascular age. Subjective: cognitive protection and energy stability. Assess after Tier 3.5 establishes a baseline.',
+    timing:'Morning. Optional Stack — add September if Tier 3.5 signals are positive.'
+  },
+  'c24':{
+    what:'Levagen+ PEA (Palmitoylethanolamide) — endogenous fatty acid amide. Neuromodulator and anti-inflammatory.',
+    why:'PEA is produced naturally by your body in response to inflammation and pain. Supplementing it reduces neuroinflammation — chronic low-grade brain inflammation is a primary driver of cognitive aging and mood dysregulation. Relevant given your cognitive optimization goals. Levagen+ uses a patented bioavailability-enhanced form.',
+    watch:'Subjective: mood stability, cognitive clarity, reduction in joint or systemic inflammation. WHOOP recovery. Slow acting — 4-8 weeks for full effect.',
+    timing:'Morning with food. Add September alongside MitoPrime.'
+  },
+  'c15':{
+    what:'AG1 (Athletic Greens) — comprehensive daily greens, multivitamin, and adaptogen blend.',
+    why:'Foundation micronutrient insurance. Covers vitamins, minerals, probiotics, digestive enzymes, and adaptogens in one drink. Given your travel schedule and variable diet, AG1 ensures you are never deficient in the basics. Important for B vitamins (methylation), zinc (testosterone cofactor), and gut health.',
+    watch:'Foundation compound — no single biomarker. General energy, immunity, and gut health. If you get sick less, recover faster, and feel consistently energized, it is working.',
+    timing:'Morning. Take before or with your supplement stack.'
+  },
+  'c16':{
+    what:'Creatine — amino acid compound stored as phosphocreatine in muscle. Energy currency for high-intensity effort.',
+    why:'Most studied sports supplement in history. At 20g/day you are in a high-maintenance phase. Creatine increases muscle phosphocreatine stores improving strength, power, and recovery. Emerging evidence shows significant cognitive benefits — creatine supports brain energy metabolism, particularly under stress or sleep deprivation relevant for your travel schedule. Also protects muscle during caloric restriction.',
+    watch:'Strength and training performance. Withings muscle mass (should hold steady during fat loss). Cognitive sharpness under fatigue. Body weight — creatine causes 1-2kg water retention in muscle, this is expected and desirable.',
+    timing:'Split across 4-5 servings daily. Confirm once as a daily total. Timing is flexible — consistency matters more.'
+  },
+  'c17':{
+    what:'Vitamin D3 — fat-soluble steroid hormone precursor. Produced by skin on UV exposure.',
+    why:'Deficiency is epidemic. D3 regulates 200+ genes, affects testosterone production (D3 receptors in Leydig cells), immune function, mood, and cardiovascular health. At 5,000-10,000 IU you are in the therapeutic optimization range. Your June labs should include 25-OH Vitamin D — target 60-80 ng/mL for optimal function.',
+    watch:'Serum 25-OH Vitamin D at labs (target 60-80 ng/mL, not just sufficient at 30). Testosterone (D3 supports T production). Mood and immune resilience.',
+    timing:'Morning with fat — D3 is fat-soluble. Your fish oil provides the ideal co-factor.'
+  },
+  'c18':{
+    what:'Fish Oil (EPA+DHA) — omega-3 polyunsaturated fatty acids. Anti-inflammatory and cardiovascular support.',
+    why:'EPA reduces systemic inflammation, a primary aging driver. DHA is structurally essential for brain cell membranes. At 1,200mg EPA+DHA you are in the cardiovascular protection range. Also serves as the fat co-factor for resveratrol, CoQ10, and Vitamin D3 absorption — making it functionally critical for your entire oral morning stack.',
+    watch:'Withings vascular age. hs-CRP (inflammation marker — target below 1.0 mg/L). Triglycerides on lipid panel (omega-3 reduces TG significantly). Cognitive clarity and mood.',
+    timing:'Morning. Take with all fat-soluble supplements — D3, CoQ10, resveratrol, NMN. The fat in fish oil is the absorption vehicle for your entire morning stack.'
+  },
+  'c19':{
+    what:'Magnesium Glycinate — highly bioavailable magnesium chelated to glycine. Calming form of magnesium.',
+    why:'Magnesium is a cofactor in 300+ enzymatic reactions including ATP production, protein synthesis, and DNA repair. Deficiency is common in active individuals who sweat. Glycinate form is gentle on digestion and has added benefit of glycine which promotes sleep quality and collagen synthesis.',
+    watch:'Sleep quality (WHOOP deep sleep minutes). Muscle recovery and cramp reduction. Stress resilience. Hard to isolate — this is foundational support.',
+    timing:'Evening. Glycinate form is calming — ideal pre-bed timing.'
+  },
+  'c20':{
+    what:'Magnesium L-Threonate (Magtein) — form of magnesium that uniquely crosses the blood-brain barrier.',
+    why:'Regular magnesium does not enter the brain efficiently. Threonate form was developed at MIT specifically to raise brain magnesium levels. Brain magnesium supports synaptic plasticity, NMDA receptor function, and learning. Combined with Alpha GPC arriving in August, this creates a comprehensive cognitive support stack. You are already noticing your brain speeding up — this is why.',
+    watch:'Cognitive performance — memory formation, learning speed, mental clarity. WHOOP sleep (brain magnesium improves sleep architecture). Synergistic with Alpha GPC — combined effect greater than either alone.',
+    timing:'1 cap morning for cognitive support throughout the day. 2 caps pre-bed for sleep architecture and overnight consolidation of learning.'
+  },
+};
 
 load();
 </script>
