@@ -1187,7 +1187,7 @@ function rHdr(){
   var syncDot=online?'<span style="width:6px;height:6px;border-radius:50%;background:var(--tx-ok);display:inline-block;margin-left:4px" title="Synced"></span>':'<span style="width:6px;height:6px;border-radius:50%;background:var(--tx-warn);display:inline-block;margin-left:4px" title="Offline - will sync when connected"></span>';
   return '<div class="hdr"><div class="hdr-left">'
     +'<span class="hdr-brand">Tony<span style="color:var(--tx-info);font-weight:700">\u00b3</span>'+syncDot+'</span>'
-    +'<span class="hdr-tag">T<span style="color:var(--tx-info);font-weight:700;font-size:17px">\u00b3</span> \u2014 longevity, performance, cognition <span style="font-size:10px;color:var(--tx3);font-family:var(--mono)">v0.13</span></span>'
+    +'<span class="hdr-tag">T<span style="color:var(--tx-info);font-weight:700;font-size:17px">\u00b3</span> \u2014 longevity, performance, cognition <span style="font-size:10px;color:var(--tx3);font-family:var(--mono)">v0.14</span></span>'
     +'</div>'+b+'</div>';
 }
 function rTabs(){
@@ -1432,12 +1432,21 @@ function rHistory(){
           +'</div></div>';
       }else{
         var m=(PMETA[e.proto]||{color:'#888'});
-        var nm=e.label?esc(e.nm)+' \u00b7 '+esc(e.label):esc(e.nm);
-        h+='<div class="hist-row"><div class="hist-dot" style="background:'+m.color+'"></div><div class="hist-body">'
-          +'<div class="hist-head"><span class="hist-nm">'+nm+(e.copied?'<span class="tag tag-same">same</span>':'')+(e.quick?'<span class="tag tag-quick">quick</span>':'')+'</span><span class="hist-tm">'+e.time+'</span></div>'
-          +'<div class="hist-meta">'+(e.dose!=null?e.dose+e.unit:'\u2014')+' \u00b7 '+e.route+(e.missed?'<span class="tag tag-missed">missed</span>':'')+'</div>'
-          +(e.notes?'<div class="hist-note">&ldquo;'+esc(e.notes)+'&rdquo;</div>':'')
-          +'</div></div>';
+        var nm=e.label?esc(e.nm)+' · '+esc(e.label):esc(e.nm);
+        h+='<div class="hist-row"><div class="hist-dot" style="background:'+m.color+'"></div><div class="hist-body">';
+        h+='<div class="hist-head"><span class="hist-nm">'+nm;
+        h+=e.copied?'<span class="tag tag-same">same</span>':'';
+        h+=e.quick?'<span class="tag tag-quick">quick</span>':'';
+        h+='</span>';
+        h+='<div style="display:flex;align-items:center;gap:.4rem">';
+        h+='<span class="hist-tm">'+e.time+'</span>';
+        h+='<button class="btn-edit" data-a="edit-log" data-lid="'+e.id+'">'+icn('pencil')+'</button>';
+        h+='</div></div>';
+        h+='<div class="hist-meta">'+(e.dose!=null?e.dose+e.unit:'—')+' · '+e.route;
+        h+=e.missed?'<span class="tag tag-missed">missed</span>':'';
+        h+='</div>';
+        h+=e.notes?'<div class="hist-note">&ldquo;'+esc(e.notes)+'&rdquo;</div>':'';
+        h+='</div></div>';
       }
     });
   });
