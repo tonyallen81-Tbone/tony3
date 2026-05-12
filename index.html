@@ -1045,8 +1045,9 @@ function rDeskRecentTable(days){
   recent.forEach(function(l){
     var m=PMETA[l.proto]||{color:'#888'};
     var status=l.missed?'<span class="tpill tpill-err">Missed</span>':l.copied?'<span class="tpill tpill-info">Same</span>':l.quick?'<span class="tpill tpill-ok">Quick</span>':'<span class="tpill tpill-ok">Logged</span>';
-    h+='<tr>'
-      +'<td>'+l.date+'</td>'
+    var dow=new Date(l.date+'T12:00:00').toLocaleDateString('en-US',{weekday:'long'});
+      h+='<tr>'
+      +'<td style="white-space:nowrap">'+l.date+'<div style="font-size:10px;color:var(--tx3)">'+dow+'</div></td>'
       +'<td>'+l.time+'</td>'
       +'<td class="tx"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+m.color+';margin-right:6px;vertical-align:middle"></span>'+esc(l.label?l.nm+' · '+l.label:l.nm)+'</td>'
       +'<td>'+(l.dose!=null?l.dose+l.unit:'—')+'</td>'
@@ -1186,7 +1187,7 @@ function rHdr(){
   var syncDot=online?'<span style="width:6px;height:6px;border-radius:50%;background:var(--tx-ok);display:inline-block;margin-left:4px" title="Synced"></span>':'<span style="width:6px;height:6px;border-radius:50%;background:var(--tx-warn);display:inline-block;margin-left:4px" title="Offline - will sync when connected"></span>';
   return '<div class="hdr"><div class="hdr-left">'
     +'<span class="hdr-brand">Tony<span style="color:var(--tx-info);font-weight:700">\u00b3</span>'+syncDot+'</span>'
-    +'<span class="hdr-tag">T<span style="color:var(--tx-info);font-weight:700;font-size:17px">\u00b3</span> \u2014 longevity, performance, cognition <span style="font-size:10px;color:var(--tx3);font-family:var(--mono)">v0.12</span></span>'
+    +'<span class="hdr-tag">T<span style="color:var(--tx-info);font-weight:700;font-size:17px">\u00b3</span> \u2014 longevity, performance, cognition <span style="font-size:10px;color:var(--tx3);font-family:var(--mono)">v0.13</span></span>'
     +'</div>'+b+'</div>';
 }
 function rTabs(){
