@@ -294,7 +294,7 @@ var SEED=[
 ];
 
 // ── State ───────────────────────────────────────────────────────────────────
-var S={cpds:[],logs:[],vitals:[],labResults:[],tab:'today',deskTab:'dashboard',labCat:'Hormonal',logging:null,editCpd:null,addingLab:false,freshStart:false,vitalsOpen:false,loaded:false,savedDays:[],histDate:null};
+var S={cpds:[],logs:[],vitals:[],labResults:[],tab:'today',deskTab:'dashboard',labCat:'Hormonal',labDetail:null,logging:null,editCpd:null,addingLab:false,logPast:false,freshStart:false,vitalsOpen:false,loaded:false,savedDays:[],histDate:null};
 var _ey=null,_ec=null;
 
 // ── Date helpers ────────────────────────────────────────────────────────────
@@ -775,123 +775,214 @@ function labTrendArrow(marker){
 }
 
 function rLabs(){
-  var cats=['Hormonal','Metabolic','CBC / Hematology','Lipids','Inflammation','Micronutrients'];
-  var drawDates=getDrawDates();
+  var drawDates=getDrawDates(); // sorted newest first
+  var drawsSorted=drawDates.slice().reverse(); // oldest first for table columns
 
   if(S.addingLab){
-    var h='<div class="body">';
-    h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">';
-    h+='<div style="font-size:16px;font-weight:600">New lab draw</div>';
-    h+='<button data-a="cancel-lab" style="background:none;border:none;color:var(--tx3);font-size:13px;font-family:var(--sans)">Cancel</button>';
-    h+='</div>';
-    h+='<div class="fi"><label class="fl" for="lab-date">Draw date</label><input type="date" id="lab-date" value="'+TODAY.str+'"></div>';
-    h+='<div class="fi"><label class="fl" for="lab-label">Draw label <span class="fl-opt">(optional)</span></label><input type="text" id="lab-label" placeholder="e.g. June 2026 labs" style="font-family:var(--sans)"></div>';
-    h+='<div style="font-size:11px;color:var(--tx3);margin-bottom:.875rem">Leave blank any markers not tested. Only filled values will be saved.</div>';
-    cats.forEach(function(cat){
-      var markers=LAB_MARKERS.filter(function(m){return m.cat===cat;});
-      h+='<div class="sec-hdr"><div class="sec-dot" style="background:var(--tx-info)"></div>'+cat+'</div>';
-      markers.forEach(function(m){
+    var cats2=['Hormonal','Metabolic','CBC / Hematology','Lipids','Inflammation','Micronutrients'];
+    var h2='<div class="body">';
+    h2+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">';
+    h2+='<div style="font-size:16px;font-weight:600">New lab draw</div>';
+    h2+='<button data-a="cancel-lab" style="background:none;border:none;color:var(--tx3);font-size:13px;font-family:var(--sans)">Cancel</button>';
+    h2+='</div>';
+    h2+='<div class="fi"><label class="fl" for="lab-date">Draw date</label><input type="date" id="lab-date" value="'+TODAY.str+'"></div>';
+    h2+='<div class="fi"><label class="fl" for="lab-label">Draw label <span class="fl-opt">(optional)</span></label><input type="text" id="lab-label" placeholder="e.g. June 2026 labs" style="font-family:var(--sans)"></div>';
+    h2+='<div style="font-size:11px;color:var(--tx3);margin-bottom:.875rem">Leave blank any markers not tested. Only filled values will be saved.</div>';
+    cats2.forEach(function(cat){
+      var markers2=LAB_MARKERS.filter(function(m){return m.cat===cat;});
+      h2+='<div class="sec-hdr"><div class="sec-dot" style="background:var(--tx-info)"></div>'+cat+'</div>';
+      markers2.forEach(function(m){
         var latest=getLabValue(m.id,null);
-        h+='<div style="display:flex;align-items:center;gap:.625rem;padding:.4rem 0;border-bottom:.5px solid var(--bd)">';
-        h+='<div style="flex:1;font-size:13px;font-weight:500">'+esc(m.name)+'</div>';
-        h+='<div style="font-size:11px;color:var(--tx3);font-family:var(--mono);width:80px;text-align:right">'+(latest?latest.value+' '+latest.unit:'—')+'</div>';
-        h+='<div style="position:relative;width:110px"><input type="number" step="any" data-lab-marker="'+m.id+'" placeholder="new" style="padding:.375rem .625rem;font-size:13px;text-align:right;padding-right:36px">';
-        h+='<span style="position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:10px;color:var(--tx3);pointer-events:none;font-family:var(--mono)">'+esc(m.unit)+'</span></div>';
-        h+='</div>';
+        h2+='<div style="display:flex;align-items:center;gap:.625rem;padding:.4rem 0;border-bottom:.5px solid var(--bd)">';
+        h2+='<div style="flex:1;font-size:13px;font-weight:500">'+esc(m.name)+'</div>';
+        h2+='<div style="font-size:11px;color:var(--tx3);font-family:var(--mono);width:80px;text-align:right">'+(latest?latest.value+' '+latest.unit:'--')+'</div>';
+        h2+='<div style="position:relative;width:110px"><input type="number" step="any" data-lab-marker="'+m.id+'" placeholder="new" style="padding:.375rem .625rem;font-size:13px;text-align:right;padding-right:36px">';
+        h2+='<span style="position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:10px;color:var(--tx3);pointer-events:none;font-family:var(--mono)">'+esc(m.unit)+'</span></div>';
+        h2+='</div>';
       });
     });
-    h+='<button class="btn-full" data-a="save-lab-draw" style="margin-top:1rem">Save lab draw</button>';
-    return h+'</div>';
+    h2+='<button class="btn-full" data-a="save-lab-draw" style="margin-top:1rem">Save lab draw</button>';
+    return h2+'</div>';
   }
 
+  // Marker detail view
+  if(S.labDetail){
+    var m=LAB_MARKERS.find(function(x){return x.id===S.labDetail;});
+    var hist=getLabHistory(S.labDetail);
+    var h3='<div class="body">';
+    h3+='<div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1rem">';
+    h3+='<button data-a="close-lab-detail" style="background:none;border:none;color:var(--tx-info);font-size:13px;font-family:var(--sans);display:flex;align-items:center;gap:3px">'+icn('arrow-left')+' Labs</button>';
+    h3+='</div>';
+    if(m){
+      h3+='<div style="font-size:18px;font-weight:700;margin-bottom:4px">'+esc(m.name)+'</div>';
+      h3+='<div style="font-size:12px;color:var(--tx3);margin-bottom:1rem">Target: '+m.target_low+' – '+m.target_high+' '+esc(m.unit)+'</div>';
+      // Mini chart using divs
+      if(hist.length){
+        var maxVal=Math.max.apply(null,hist.map(function(e){return e.value;}));
+        var minVal=Math.min.apply(null,hist.map(function(e){return e.value;}));
+        var range=Math.max(maxVal-minVal,m.target_high*0.2);
+        var chartMax=Math.max(maxVal*1.1, m.flag_high||m.target_high*1.2);
+        var chartMin=Math.max(0,(m.flag_low||m.target_low||0)*0.8);
+        h3+='<div style="background:var(--bg2);border:.5px solid var(--bd);border-radius:var(--r);padding:1rem;margin-bottom:1rem">';
+        h3+='<div style="display:flex;align-items:flex-end;justify-content:space-around;height:120px;gap:.5rem;position:relative">';
+        // Target zone band
+        var targetTopPct=(1-(m.target_high-chartMin)/(chartMax-chartMin))*100;
+        var targetHPct=((m.target_high-m.target_low)/(chartMax-chartMin))*100;
+        h3+='<div style="position:absolute;left:0;right:0;top:'+targetTopPct+'%;height:'+targetHPct+'%;background:var(--bg-ok);opacity:.4;border-radius:2px;pointer-events:none"></div>';
+        hist.forEach(function(e){
+          var heightPct=Math.max(4,((e.value-chartMin)/(chartMax-chartMin))*100);
+          var color=labStatusColor(e.flag);
+          var lbl=e.draw_label||e.draw_date;
+          var shortLbl=lbl.length>8?lbl.slice(0,8):lbl;
+          h3+='<div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1">';
+          h3+='<div style="font-size:11px;font-weight:600;color:'+color+';font-family:var(--mono)">'+e.value+'</div>';
+          h3+='<div style="width:100%;height:'+heightPct+'%;background:'+color+';border-radius:3px 3px 0 0;min-height:4px"></div>';
+          h3+='<div style="font-size:9px;color:var(--tx3);text-align:center;white-space:nowrap">'+esc(shortLbl)+'</div>';
+          h3+='</div>';
+        });
+        h3+='</div>';
+        h3+='<div style="font-size:10px;color:var(--tx3);text-align:center;margin-top:.5rem">Green band = target range ('+m.target_low+' – '+m.target_high+' '+esc(m.unit)+')</div>';
+        h3+='</div>';
+      }
+      // All draws table
+      h3+='<div style="font-size:13px;font-weight:600;margin-bottom:.5rem">All draws</div>';
+      hist.slice().reverse().forEach(function(e){
+        h3+='<div style="display:flex;align-items:center;justify-content:space-between;padding:.5rem .75rem;background:var(--bg2);border:.5px solid var(--bd);border-radius:var(--r);margin-bottom:.3rem">';
+        h3+='<div><div style="font-size:13px;font-weight:500">'+esc(e.draw_label||e.draw_date)+'</div>';
+        h3+='<div style="font-size:11px;color:var(--tx3);font-family:var(--mono)">'+e.draw_date+'</div></div>';
+        h3+='<div style="text-align:right"><div style="font-size:16px;font-weight:700;font-family:var(--mono);color:'+labStatusColor(e.flag)+'">'+e.value+'<span style="font-size:11px;color:var(--tx3)"> '+esc(e.unit)+'</span></div>';
+        h3+='<div style="font-size:10px;padding:1px 5px;border-radius:3px;display:inline-block;background:'+labStatusBg(e.flag)+';color:'+labStatusColor(e.flag)+'">'+e.flag+'</div></div>';
+        h3+='</div>';
+        if(e.notes)h3+='<div style="font-size:11px;color:var(--tx2);font-style:italic;padding:.25rem .75rem">&ldquo;'+esc(e.notes)+'&rdquo;</div>';
+      });
+      h3+='<div style="margin-top:1rem;padding:.75rem;background:var(--bg2);border:.5px solid var(--bd);border-radius:var(--r);font-size:12px;color:var(--tx2);line-height:1.6">'+esc(m.note)+'</div>';
+    }
+    return h3+'</div>';
+  }
+
+  // Main Labs view — summary table + category cards
   var h='<div class="body">';
 
-  // Header with add button
+  // Header
   h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem">';
-  h+='<div>';
-  h+='<div style="font-size:16px;font-weight:600">Lab results</div>';
-  h+='<div style="font-size:11px;color:var(--tx3)">'+drawDates.length+' draw'+(drawDates.length!==1?'s':'')+' on record</div>';
-  h+='</div>';
+  h+='<div><div style="font-size:16px;font-weight:600">Lab results</div>';
+  h+='<div style="font-size:11px;color:var(--tx3)">'+drawDates.length+' draw'+(drawDates.length!==1?'s':'')+' · tap any marker for detail</div></div>';
   h+='<button data-a="add-lab" style="padding:6px 14px;background:var(--tx-info);color:#fff;border:none;border-radius:var(--r);font-size:13px;font-weight:500;font-family:var(--sans)">+ Add draw</button>';
   h+='</div>';
 
   // Next draw reminder
-  h+='<div style="background:var(--bg-warn);border:.5px solid var(--bd-warn);border-radius:var(--r);padding:.75rem;margin-bottom:.875rem;font-size:12px;color:var(--tx-warn);display:flex;align-items:center;gap:.5rem">';
-  h+=icn('clock')+' <strong>Next draw:</strong>&nbsp;June 2026 &mdash; Priority: E2 confirmation, HbA1c, fasting glucose, IGF-1 (first time), lipids, hematocrit';
+  h+='<div style="background:var(--bg-warn);border:.5px solid var(--bd-warn);border-radius:var(--r);padding:.625rem .75rem;margin-bottom:.875rem;font-size:11px;color:var(--tx-warn);display:flex;align-items:center;gap:.4rem">';
+  h+=icn('clock')+' <strong>Next draw: June 2026</strong> &mdash; E2, HbA1c, glucose, IGF-1 (first), lipids, hematocrit';
   h+='</div>';
 
-  // Category tabs
-  var labCats=['Hormonal','Metabolic','CBC / Hematology','Lipids','Inflammation','Micronutrients'];
+  // SUMMARY TABLE — all markers, all draws as columns
+  if(drawsSorted.length>0){
+    h+='<div style="font-size:13px;font-weight:600;margin-bottom:.5rem">All markers — all draws</div>';
+    h+='<div style="overflow-x:auto;margin-bottom:1.25rem"><table class="data-table" style="min-width:100%"><thead><tr>';
+    h+='<th style="min-width:140px">Marker</th>';
+    drawsSorted.forEach(function(d){
+      var lbl=S.labResults.find(function(r){return r.draw_date===d;})||{};
+      h+='<th style="text-align:center;white-space:nowrap">'+(lbl.draw_label||d)+'<div style="font-size:9px;font-weight:400;color:var(--tx3)">'+d+'</div></th>';
+    });
+    h+='<th style="text-align:center">Target</th></tr></thead><tbody>';
+
+    var tableCats=['Hormonal','Metabolic','CBC / Hematology','Lipids','Inflammation','Micronutrients'];
+    tableCats.forEach(function(cat){
+      var catMarkers=LAB_MARKERS.filter(function(m){return m.cat===cat;});
+      h+='<tr><td colspan="'+(drawsSorted.length+2)+'" style="background:var(--bg2);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--tx3);padding:.375rem .75rem">'+cat+'</td></tr>';
+      catMarkers.forEach(function(m){
+        var hist=getLabHistory(m.id);
+        var hasAny=hist.length>0;
+        h+='<tr style="cursor:pointer" data-a="open-lab-detail" data-mid="'+m.id+'">';
+        h+='<td class="tx" style="font-size:12px">'+esc(m.name)+'</td>';
+        drawsSorted.forEach(function(d){
+          var entry=hist.find(function(r){return r.draw_date===d;});
+          if(entry){
+            var prev=hist.filter(function(r){return r.draw_date<d;}).pop();
+            var arrow='';
+            if(prev){
+              var lowerBetter2=['glucose_fasting','hba1c','creatinine','ldl','apob','non_hdl','triglycerides','hs_crp','glyca','estradiol','psa'];
+              var isLB=lowerBetter2.indexOf(m.id)>-1;
+              var diff=entry.value-prev.value;
+              var improving2=(isLB&&diff<0)||(!isLB&&diff>0);
+              if(Math.abs(diff)>0.01)arrow='<span style="font-size:10px;color:'+(improving2?'var(--tx-ok)':'var(--tx-err)')+'"> '+(diff>0?'↑':'↓')+'</span>';
+            }
+            h+='<td style="text-align:center"><span style="font-weight:600;color:'+labStatusColor(entry.flag)+';font-family:var(--mono);font-size:12px">'+entry.value+'</span>'+arrow+'</td>';
+          }else{
+            h+='<td style="text-align:center;color:var(--tx3);font-size:11px">—</td>';
+          }
+        });
+        h+='<td style="text-align:center;font-size:10px;color:var(--tx3);font-family:var(--mono)">'+m.target_low+'–'+m.target_high+'</td>';
+        h+='</tr>';
+      });
+    });
+    h+='</tbody></table></div>';
+  }
+
+  // Category filter tabs
+  var labCats2=['Hormonal','Metabolic','CBC / Hematology','Lipids','Inflammation','Micronutrients'];
+  h+='<div style="font-size:13px;font-weight:600;margin-bottom:.5rem">Detail by category</div>';
   h+='<div style="display:flex;gap:.375rem;flex-wrap:wrap;margin-bottom:.875rem">';
-  labCats.forEach(function(cat){
+  labCats2.forEach(function(cat){
     h+='<button class="desk-tab'+(S.labCat===cat?' on':'')+'" data-a="lab-cat" data-v="'+cat+'">'+cat+'</button>';
   });
   h+='</div>';
 
-  // Markers for selected category
-  var markers=LAB_MARKERS.filter(function(m){return m.cat===S.labCat;});
+  // Marker cards for selected category
+  var catMarkers2=LAB_MARKERS.filter(function(m){return m.cat===S.labCat;});
+  catMarkers2.forEach(function(m){
+    var hist2=getLabHistory(m.id);
+    var latest2=hist2.length?hist2[hist2.length-1]:null;
+    var prev2=hist2.length>1?hist2[hist2.length-2]:null;
+    var flag2=latest2?latest2.flag:'none';
 
-  markers.forEach(function(m){
-    var hist=getLabHistory(m.id);
-    var latest=hist.length?hist[hist.length-1]:null;
-    var prev=hist.length>1?hist[hist.length-2]:null;
-    var flag=latest?latest.flag:'none';
-
-    h+='<div style="background:var(--bg2);border:.5px solid var(--bd);border-radius:var(--r);padding:.75rem;margin-bottom:.5rem">';
-
-    // Header row
+    h+='<div style="background:var(--bg2);border:.5px solid var(--bd);border-radius:var(--r);padding:.75rem;margin-bottom:.5rem;cursor:pointer" data-a="open-lab-detail" data-mid="'+m.id+'">';
+    // Header
     h+='<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:.375rem">';
     h+='<div style="font-size:13px;font-weight:600">'+esc(m.name)+'</div>';
-    if(latest){
+    if(latest2){
       h+='<div style="text-align:right">';
-      h+='<div style="font-size:18px;font-weight:700;font-family:var(--mono);color:'+labStatusColor(flag)+'">'+latest.value+'<span style="font-size:11px;font-weight:400;color:var(--tx3)"> '+esc(latest.unit)+'</span></div>';
-      h+='<div style="font-size:11px;color:var(--tx3)">'+latest.draw_date+' '+labTrendArrow(m.id)+'</div>';
+      h+='<div style="font-size:18px;font-weight:700;font-family:var(--mono);color:'+labStatusColor(flag2)+'">'+latest2.value+'<span style="font-size:11px;font-weight:400;color:var(--tx3)"> '+esc(latest2.unit)+'</span></div>';
+      h+='<div style="font-size:11px;color:var(--tx3)">'+latest2.draw_date+' '+labTrendArrow(m.id)+'</div>';
       h+='</div>';
     }else{
       h+='<div style="font-size:12px;color:var(--tx3);font-style:italic">Not yet measured</div>';
     }
     h+='</div>';
-
     // Target bar
-    if(latest&&m.target_high){
-      var tLow=m.target_low||0;
-      var tHigh=m.target_high;
-      var fHigh=m.flag_high||tHigh*1.5;
-      var pct=Math.min(100,Math.max(0,((latest.value-tLow)/(fHigh-tLow))*100));
-      var targetPct=Math.min(100,((tHigh-tLow)/(fHigh-tLow))*100);
+    if(latest2&&m.target_high){
+      var tLow2=m.target_low||0;
+      var fHigh2=m.flag_high||m.target_high*1.5;
+      var pct2=Math.min(100,Math.max(0,((latest2.value-tLow2)/(fHigh2-tLow2))*100));
+      var targetPct2=Math.min(100,((m.target_high-tLow2)/(fHigh2-tLow2))*100);
       h+='<div style="position:relative;height:4px;background:var(--bd);border-radius:2px;margin:.375rem 0">';
-      h+='<div style="position:absolute;left:0;top:0;height:100%;width:'+targetPct+'%;background:var(--bg-ok);border-radius:2px"></div>';
-      h+='<div style="position:absolute;left:0;top:0;height:100%;width:'+pct+'%;background:'+labStatusColor(flag)+';border-radius:2px;transition:width .4s"></div>';
+      h+='<div style="position:absolute;left:0;top:0;height:100%;width:'+targetPct2+'%;background:var(--bg-ok);border-radius:2px"></div>';
+      h+='<div style="position:absolute;left:0;top:0;height:100%;width:'+pct2+'%;background:'+labStatusColor(flag2)+';border-radius:2px;transition:width .4s"></div>';
       h+='</div>';
       h+='<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--tx3);font-family:var(--mono);margin-bottom:.375rem">';
-      h+='<span>Target: '+tLow+'-'+tHigh+'</span>';
-      if(prev)h+='<span>Prev: '+prev.value+' ('+prev.draw_date+')</span>';
+      h+='<span>Target: '+tLow2+'–'+m.target_high+'</span>';
+      if(prev2)h+='<span>Prev: '+prev2.value+' ('+prev2.draw_date+')</span>';
       h+='</div>';
     }
-
-    // History dots (one per draw)
-    if(hist.length>1){
+    // Draw dots
+    if(hist2.length>0){
       h+='<div style="display:flex;gap:.375rem;align-items:center;margin-bottom:.375rem">';
-      hist.forEach(function(e){
-        var c=labStatusColor(e.flag);
+      hist2.forEach(function(e){
         h+='<div title="'+e.draw_date+': '+e.value+' '+e.unit+'" style="display:flex;flex-direction:column;align-items:center;gap:2px">';
-        h+='<div style="width:8px;height:8px;border-radius:50%;background:'+c+'"></div>';
+        h+='<div style="width:8px;height:8px;border-radius:50%;background:'+labStatusColor(e.flag)+'"></div>';
         h+='<div style="font-size:9px;color:var(--tx3);font-family:var(--mono)">'+e.draw_date.slice(2,7)+'</div>';
         h+='</div>';
       });
+      h+='<span style="font-size:10px;color:var(--tx3);margin-left:4px">Tap for full detail →</span>';
       h+='</div>';
     }
-
-    // Note
     h+='<div style="font-size:11px;color:var(--tx3);font-style:italic;line-height:1.5">'+esc(m.note)+'</div>';
-    if(latest&&latest.notes){
-      h+='<div style="font-size:11px;color:var(--tx2);margin-top:2px">&ldquo;'+esc(latest.notes)+'&rdquo;</div>';
-    }
     h+='</div>';
   });
 
   return h+'</div>';
 }
+
 
 function rDesktopLayout(){
   return '<div class="desktop-layout">'
@@ -1238,6 +1329,67 @@ function rVitals(){
     +'<button class="btn-full" data-a="save-vitals" style="margin-top:.375rem">Save vitals</button></div>';
 }
 
+
+function rLogPastForm(){
+  var visible=S.cpds.filter(function(c){return c.status!=='PAUSED'&&c.status!=='DISCONTINUED';});
+  var h='<div class="body">';
+  h+='<div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1rem">';
+  h+='<button data-a="cancel-log-past" style="background:none;border:none;color:var(--tx-info);font-size:13px;font-family:var(--sans);display:flex;align-items:center;gap:3px">'+icn('arrow-left')+' Back</button>';
+  h+='<div style="font-size:15px;font-weight:600">Log missed dose</div>';
+  h+='</div>';
+  h+='<div class="fi"><label class="fl" for="past-date">Date taken</label><input type="date" id="past-date" value="'+(S.histDate||ystrStr())+'"></div>';
+  h+='<div class="fi"><label class="fl" for="past-time">Time taken</label><input type="time" id="past-time" value="09:00"></div>';
+  h+='<div class="fi"><label class="fl" for="past-cpd">Compound</label><select id="past-cpd" style="font-family:var(--sans)">';
+  visible.forEach(function(c){
+    if(c.splits){
+      c.splits.forEach(function(s){
+        h+='<option value="'+c.id+'|'+s.sid+'">'+esc(c.name)+' — '+esc(s.label)+'</option>';
+      });
+    } else {
+      h+='<option value="'+c.id+'|">'+esc(c.name)+'</option>';
+    }
+  });
+  h+='</select></div>';
+  h+='<div class="fi"><label class="fl" for="past-dose">Dose</label>';
+  h+='<input type="number" step="any" id="past-dose" placeholder="amount"></div>';
+  h+='<div class="fi"><label class="fl" for="past-notes">Notes <span class="fl-opt">(optional)</span></label>';
+  h+='<textarea id="past-notes" style="height:64px" placeholder="Any observations..."></textarea></div>';
+  h+='<button class="btn-full" data-a="submit-log-past">Save missed dose</button>';
+  return h+'</div>';
+}
+
+function doLogPast(){
+  var dateEl=document.getElementById('past-date');
+  var timeEl=document.getElementById('past-time');
+  var cpdEl=document.getElementById('past-cpd');
+  var doseEl=document.getElementById('past-dose');
+  var notesEl=document.getElementById('past-notes');
+  if(!dateEl||!cpdEl)return;
+  var parts=(cpdEl.value||'').split('|');
+  var cid=parts[0], sid=parts[1]||null;
+  var c=S.cpds.find(function(x){return x.id===cid;});
+  if(!c)return;
+  var split=sid&&c.splits?c.splits.find(function(s){return s.sid===sid;}):null;
+  var dose=parseFloat(doseEl?doseEl.value:'');
+  var entry={
+    id:'l'+Date.now(),
+    date:dateEl.value,
+    time:timeEl?timeEl.value:'09:00',
+    cid:c.id, sid:sid||null,
+    nm:c.name, label:split?split.label:null,
+    proto:c.protocol,
+    dose:isNaN(dose)?null:dose,
+    unit:split?split.unit:c.unit,
+    route:c.route,
+    notes:notesEl?notesEl.value:'',
+    missed:false, quick:false, copied:false
+  };
+  S.logs=[entry].concat(S.logs);
+  pushLog(entry);
+  S.logPast=false;
+  save(); render(false);
+}
+
 function rHistory(){
   var doses=S.logs.map(function(l){return Object.assign({},l,{_t:'dose'});});
   var vits=S.vitals.map(function(v){return Object.assign({},v,{_t:'vitals'});});
@@ -1249,9 +1401,14 @@ function rHistory(){
   if(!S.histDate||allDates.indexOf(S.histDate)===-1) S.histDate=allDates[0];
   var curIdx=allDates.indexOf(S.histDate);
   var canPrev=curIdx<allDates.length-1, canNext=curIdx>0;
-  var dateLbl=S.histDate===TODAY.str?'Today':new Date(S.histDate+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'});
+  var dateLbl=S.histDate===TODAY.str?'Today — '+new Date(TODAY.str+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'}):new Date(S.histDate+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric',year:'numeric'});
   var saved=isSaved(S.histDate);
+  if(S.logPast)return rLogPastForm();
   var h='<div class="body">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem">'
+    +'<div style="font-size:11px;color:var(--tx3)">'+icn('pencil')+' tap to edit any entry</div>'
+    +'<button data-a="log-past" style="padding:5px 12px;background:var(--bg-info);border:.5px solid var(--bd-info);border-radius:var(--r);color:var(--tx-info);font-size:11px;font-weight:500;font-family:var(--sans)">'+icn('plus')+' Log missed dose</button>'
+    +'</div>'
     +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem;background:var(--bg2);border:.5px solid var(--bd);border-radius:var(--rl);padding:.625rem .875rem">'
     +'<button data-a="hist-prev" style="background:none;border:none;color:'+(canPrev?'var(--tx-info)':'var(--tx3)')+';font-size:20px;padding:0;font-family:var(--sans)" '+(canPrev?'':'disabled')+'>'+icn('chevron-left')+'</button>'
     +'<div style="text-align:center"><div style="font-size:13px;font-weight:500">'+dateLbl+'</div>'
@@ -1435,6 +1592,11 @@ function onClick(e){
   else if(a==='cancel-lab'){S.addingLab=false;render(false);}
   else if(a==='lab-cat'){S.labCat=el.dataset.v;render(true);}
   else if(a==='save-lab-draw'){var dEl=document.getElementById('lab-date'),lEl=document.getElementById('lab-label');doSaveLabDraw(dEl?dEl.value:TODAY.str,lEl?lEl.value:'');}
+  else if(a==='open-lab-detail'){S.labDetail=el.dataset.mid;render(false);}
+  else if(a==='close-lab-detail'){S.labDetail=null;render(false);}
+  else if(a==='log-past'){S.logPast=true;render(false);}
+  else if(a==='cancel-log-past'){S.logPast=false;render(false);}
+  else if(a==='submit-log-past'){doLogPast();}
   else if(a==='hist-prev'){navHist(-1);}
   else if(a==='hist-next'){navHist(1);}
   else if(a==='open-log'){S.logging={cid:cid,sid:null,editId:null};render(false);}
