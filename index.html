@@ -294,7 +294,7 @@ var SEED=[
 ];
 
 // ── State ───────────────────────────────────────────────────────────────────
-var S={cpds:[],logs:[],vitals:[],labResults:[],tab:'today',deskTab:'dashboard',labCat:'Hormonal',labDetail:null,logging:null,editCpd:null,addingLab:false,logPast:false,freshStart:false,vitalsOpen:false,loaded:false,savedDays:[],histDate:null};
+var S={cpds:[],logs:[],vitals:[],labResults:[],tab:'today',deskTab:'dashboard',labCat:'Hormonal',labDetail:null,logging:null,editCpd:null,addingLab:false,logPast:false,prevTab:null,freshStart:false,vitalsOpen:false,loaded:false,savedDays:[],histDate:null};
 var _ey=null,_ec=null;
 
 // ── Date helpers ────────────────────────────────────────────────────────────
@@ -1194,7 +1194,7 @@ function rHdr(){
   var syncDot=online?'<span style="width:6px;height:6px;border-radius:50%;background:var(--tx-ok);display:inline-block;margin-left:4px" title="Synced"></span>':'<span style="width:6px;height:6px;border-radius:50%;background:var(--tx-warn);display:inline-block;margin-left:4px" title="Offline - will sync when connected"></span>';
   return '<div class="hdr"><div class="hdr-left">'
     +'<span class="hdr-brand">Tony<span style="color:var(--tx-info);font-weight:700">\u00b3</span>'+syncDot+'</span>'
-    +'<span class="hdr-tag">T<span style="color:var(--tx-info);font-weight:700;font-size:17px">\u00b3</span> \u2014 longevity, performance, cognition <span style="font-size:10px;color:var(--tx3);font-family:var(--mono)">v0.15</span></span>'
+    +'<span class="hdr-tag">T<span style="color:var(--tx-info);font-weight:700;font-size:17px">\u00b3</span> \u2014 longevity, performance, cognition <span style="font-size:10px;color:var(--tx3);font-family:var(--mono)">v0.16</span></span>'
     +'</div>'+b+'</div>';
 }
 function rTabs(){
@@ -1611,15 +1611,15 @@ function onClick(e){
   else if(a==='save-lab-draw'){var dEl=document.getElementById('lab-date'),lEl=document.getElementById('lab-label');doSaveLabDraw(dEl?dEl.value:TODAY.str,lEl?lEl.value:'');}
   else if(a==='open-lab-detail'){S.labDetail=el.dataset.mid;render(false);}
   else if(a==='close-lab-detail'){S.labDetail=null;render(false);}
-  else if(a==='log-past'){S.logPast=true;S.deskTab='history';render(false);}
-  else if(a==='cancel-log-past'){S.logPast=false;render(false);}
+  else if(a==='log-past'){S.logPast=true;S.tab='history';S.deskTab='history';render(false);}
+  else if(a==='cancel-log-past'){S.logPast=false;S.tab='history';render(false);}
   else if(a==='submit-log-past'){doLogPast();}
   else if(a==='hist-prev'){navHist(-1);}
   else if(a==='hist-next'){navHist(1);}
-  else if(a==='open-log'){S.logging={cid:cid,sid:null,editId:null};render(false);}
-  else if(a==='open-split-log'){S.logging={cid:cid,sid:sid,editId:null};render(false);}
-  else if(a==='edit-log'){var lg=S.logs.find(function(l){return l.id===lid;});if(lg)S.logging={cid:lg.cid,sid:lg.sid||null,editId:lg.id};render(false);}
-  else if(a==='back'){S.logging=null;render(false);}
+  else if(a==='open-log'){S.prevTab=S.tab;S.logging={cid:cid,sid:null,editId:null};render(false);}
+  else if(a==='open-split-log'){S.prevTab=S.tab;S.logging={cid:cid,sid:sid,editId:null};render(false);}
+  else if(a==='edit-log'){S.prevTab=S.tab;var lg=S.logs.find(function(l){return l.id===lid;});if(lg)S.logging={cid:lg.cid,sid:lg.sid||null,editId:lg.id};render(false);}
+  else if(a==='back'){S.logging=null;if(S.prevTab)S.tab=S.prevTab;render(false);}
   else if(a==='same-one'){doSameOne(cid,null);}
   else if(a==='same-split'){doSameOne(cid,sid);}
   else if(a==='same-all'){doSameAll();}
@@ -1627,7 +1627,7 @@ function onClick(e){
   else if(a==='open-vitals'){var tv=S.vitals.filter(function(v){return v.date===TODAY.str;});if(tv.length){_ey=tv[0].energyYest;_ec=tv[0].energyCurrent;}S.vitalsOpen=true;render(true);}
   else if(a==='save-vitals'){doSaveVitals();}
   else if(a==='open-cpd-edit'){S.editCpd=cid;render(false);}
-  else if(a==='back-cpd'){S.editCpd=null;render(false);}
+  else if(a==='back-cpd'){S.editCpd=null;if(S.prevTab)S.tab=S.prevTab;render(false);}
   else if(a==='save-cpd'){doSaveCpd(cid);}
   else if(a==='submit'){
     e.stopPropagation();
