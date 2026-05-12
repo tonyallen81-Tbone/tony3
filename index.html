@@ -660,6 +660,7 @@ function render(preserveScroll){
   var sy=preserveScroll?window.scrollY:0;
   if(S.logging)el.innerHTML=rLogForm();
   else if(S.editCpd)el.innerHTML=rCpdEditForm();
+  else if(S.logPast)el.innerHTML=rHdr()+rTabs()+'<div class="body">'+rLogPastForm()+'</div>';
   else el.innerHTML=rHdr()+rTabs()+rDesktopLayout();
   bind();
   if(preserveScroll)requestAnimationFrame(function(){window.scrollTo(0,sy);});
@@ -1004,8 +1005,7 @@ function rDesktopRight(){
   }).join('')+'</div>';
 
   var content='';
-  if(S.logPast) content=rLogPastForm();
-  else if(S.logging) content=rLogForm();
+  if(S.logging) content=rLogForm();
   else if(S.editCpd) content=rCpdEditForm();
   else if(S.deskTab==='dashboard') content=rDeskDashboard();
   else if(S.deskTab==='history') content=rDeskHistory();
@@ -1046,7 +1046,7 @@ function rDeskRecentTable(days){
   if(!recent.length)return '<div class="empty" style="padding:2rem 0"><div class="empty-tx">No logs yet</div></div>';
   var h='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem">'
     +'<div style="font-size:12px;color:var(--tx3)">'+icn('pencil')+' click to edit any entry</div>'
-    +'<button data-a="log-past" style="padding:6px 14px;background:var(--tx-info);color:#fff;border:none;border-radius:var(--r);font-size:13px;font-weight:500;font-family:var(--sans)">'+icn('plus')+' Log missed dose</button>'
+    +'<button data-a="log-past" style="padding:6px 14px;background:var(--tx-info);color:#fff;border:none;border-radius:var(--r);font-size:13px;font-weight:500;font-family:var(--sans)">'+icn('plus')+' Add past entry</button>'
     +'</div>';
   h+='<div style="overflow-x:auto"><table class="data-table"><thead><tr><th>Date</th><th>Time</th><th>Compound</th><th>Dose</th><th>Route</th><th>Notes</th><th>Status</th><th></th></tr></thead><tbody>';
   recent.forEach(function(l){
@@ -1194,7 +1194,7 @@ function rHdr(){
   var syncDot=online?'<span style="width:6px;height:6px;border-radius:50%;background:var(--tx-ok);display:inline-block;margin-left:4px" title="Synced"></span>':'<span style="width:6px;height:6px;border-radius:50%;background:var(--tx-warn);display:inline-block;margin-left:4px" title="Offline - will sync when connected"></span>';
   return '<div class="hdr"><div class="hdr-left">'
     +'<span class="hdr-brand">Tony<span style="color:var(--tx-info);font-weight:700">\u00b3</span>'+syncDot+'</span>'
-    +'<span class="hdr-tag">T<span style="color:var(--tx-info);font-weight:700;font-size:17px">\u00b3</span> \u2014 longevity, performance, cognition <span style="font-size:10px;color:var(--tx3);font-family:var(--mono)">v0.16</span></span>'
+    +'<span class="hdr-tag">T<span style="color:var(--tx-info);font-weight:700;font-size:17px">\u00b3</span> \u2014 longevity, performance, cognition <span style="font-size:10px;color:var(--tx3);font-family:var(--mono)">v0.17</span></span>'
     +'</div>'+b+'</div>';
 }
 function rTabs(){
@@ -1343,7 +1343,7 @@ function rLogPastForm(){
   var h='<div class="body">';
   h+='<div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1rem">';
   h+='<button data-a="cancel-log-past" style="background:none;border:none;color:var(--tx-info);font-size:13px;font-family:var(--sans);display:flex;align-items:center;gap:3px">'+icn('arrow-left')+' Back</button>';
-  h+='<div style="font-size:15px;font-weight:600">Log missed dose</div>';
+  h+='<div style="font-size:15px;font-weight:600">Add past entry</div>';
   h+='</div>';
   h+='<div class="fi"><label class="fl" for="past-date">Date taken</label><input type="date" id="past-date" value="'+(S.histDate||ystrStr())+'"></div>';
   h+='<div class="fi"><label class="fl" for="past-time">Time taken</label><input type="time" id="past-time" value="09:00"></div>';
@@ -1411,11 +1411,10 @@ function rHistory(){
   var canPrev=curIdx<allDates.length-1, canNext=curIdx>0;
   var dateLbl=S.histDate===TODAY.str?'Today — '+new Date(TODAY.str+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'}):new Date(S.histDate+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric',year:'numeric'});
   var saved=isSaved(S.histDate);
-  if(S.logPast)return rLogPastForm();
   var h='<div class="body">'
     +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem">'
     +'<div style="font-size:11px;color:var(--tx3)">'+icn('pencil')+' tap to edit any entry</div>'
-    +'<button data-a="log-past" style="padding:5px 12px;background:var(--bg-info);border:.5px solid var(--bd-info);border-radius:var(--r);color:var(--tx-info);font-size:11px;font-weight:500;font-family:var(--sans)">'+icn('plus')+' Log missed dose</button>'
+    +'<button data-a="log-past" style="padding:5px 12px;background:var(--bg-info);border:.5px solid var(--bd-info);border-radius:var(--r);color:var(--tx-info);font-size:11px;font-weight:500;font-family:var(--sans)">'+icn('plus')+' Add past entry</button>'
     +'</div>'
     +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem;background:var(--bg2);border:.5px solid var(--bd);border-radius:var(--rl);padding:.625rem .875rem">'
     +'<button data-a="hist-prev" style="background:none;border:none;color:'+(canPrev?'var(--tx-info)':'var(--tx3)')+';font-size:20px;padding:0;font-family:var(--sans)" '+(canPrev?'':'disabled')+'>'+icn('chevron-left')+'</button>'
