@@ -660,7 +660,7 @@ function render(preserveScroll){
   var sy=preserveScroll?window.scrollY:0;
   if(S.logging)el.innerHTML=rLogForm();
   else if(S.editCpd)el.innerHTML=rCpdEditForm();
-  else if(S.logPast)el.innerHTML=rHdr()+rTabs()+'<div class="body">'+rLogPastForm()+'</div>';
+  else if(S.logPast)el.innerHTML=rLogPastForm();
   else el.innerHTML=rHdr()+rTabs()+rDesktopLayout();
   bind();
   if(preserveScroll)requestAnimationFrame(function(){window.scrollTo(0,sy);});
@@ -1194,7 +1194,7 @@ function rHdr(){
   var syncDot=online?'<span style="width:6px;height:6px;border-radius:50%;background:var(--tx-ok);display:inline-block;margin-left:4px" title="Synced"></span>':'<span style="width:6px;height:6px;border-radius:50%;background:var(--tx-warn);display:inline-block;margin-left:4px" title="Offline - will sync when connected"></span>';
   return '<div class="hdr"><div class="hdr-left">'
     +'<span class="hdr-brand">Tony<span style="color:var(--tx-info);font-weight:700">\u00b3</span>'+syncDot+'</span>'
-    +'<span class="hdr-tag">T<span style="color:var(--tx-info);font-weight:700;font-size:17px">\u00b3</span> \u2014 longevity, performance, cognition <span style="font-size:10px;color:var(--tx3);font-family:var(--mono)">v0.18</span></span>'
+    +'<span class="hdr-tag">T<span style="color:var(--tx-info);font-weight:700;font-size:17px">\u00b3</span> \u2014 longevity, performance, cognition <span style="font-size:10px;color:var(--tx3);font-family:var(--mono)">v0.19</span></span>'
     +'</div>'+b+'</div>';
 }
 function rTabs(){
@@ -1340,30 +1340,35 @@ function rVitals(){
 
 function rLogPastForm(){
   var visible=S.cpds.filter(function(c){return c.status!=='PAUSED'&&c.status!=='DISCONTINUED';});
-  var h='<div class="body">';
-  h+='<div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1rem">';
-  h+='<button data-a="cancel-log-past" style="background:none;border:none;color:var(--tx-info);font-size:13px;font-family:var(--sans);display:flex;align-items:center;gap:3px">'+icn('arrow-left')+' Back</button>';
-  h+='<div style="font-size:15px;font-weight:600">Add past entry</div>';
+  var h='<div>';
+  h+='<div class="form-hdr">';
+  h+='<button class="back-btn" data-a="cancel-log-past">'+icn('arrow-left')+' Back</button>';
+  h+='<span class="form-title">Add past entry</span>';
   h+='</div>';
-  h+='<div class="fi"><label class="fl" for="past-date">Date taken</label><input type="date" id="past-date" value="'+(S.histDate||ystrStr())+'"></div>';
-  h+='<div class="fi"><label class="fl" for="past-time">Time taken</label><input type="time" id="past-time" value="09:00"></div>';
-  h+='<div class="fi"><label class="fl" for="past-cpd">Compound</label><select id="past-cpd" style="font-family:var(--sans)">';
+  h+='<div class="form-body">';
+  h+='<div class="fi"><label class="fl" for="past-date">Date taken</label>';
+  h+='<input type="date" id="past-date" value="'+(S.histDate||ystrStr())+'"></div>';
+  h+='<div class="fi"><label class="fl" for="past-time">Time taken</label>';
+  h+='<input type="time" id="past-time" value="09:00"></div>';
+  h+='<div class="fi"><label class="fl" for="past-cpd">Compound</label>';
+  h+='<select id="past-cpd" style="font-family:var(--sans)">';
   visible.forEach(function(c){
     if(c.splits){
       c.splits.forEach(function(s){
         h+='<option value="'+c.id+'|'+s.sid+'">'+esc(c.name)+' — '+esc(s.label)+'</option>';
       });
-    } else {
+    }else{
       h+='<option value="'+c.id+'|">'+esc(c.name)+'</option>';
     }
   });
   h+='</select></div>';
-  h+='<div class="fi"><label class="fl" for="past-dose">Dose</label>';
+  h+='<div class="fi"><label class="fl" for="past-dose">Dose <span class="fl-opt">(optional)</span></label>';
   h+='<input type="number" step="any" id="past-dose" placeholder="amount"></div>';
   h+='<div class="fi"><label class="fl" for="past-notes">Notes <span class="fl-opt">(optional)</span></label>';
   h+='<textarea id="past-notes" style="height:64px" placeholder="Any observations..."></textarea></div>';
   h+='<button class="btn-full" data-a="submit-log-past">Save past entry</button>';
-  return h+'</div></div>';
+  h+='</div></div>';
+  return h;
 }
 
 function doLogPast(){
