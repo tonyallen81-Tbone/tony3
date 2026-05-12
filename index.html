@@ -1004,7 +1004,10 @@ function rDesktopRight(){
   }).join('')+'</div>';
 
   var content='';
-  if(S.deskTab==='dashboard') content=rDeskDashboard();
+  if(S.logPast) content=rLogPastForm();
+  else if(S.logging) content=rLogForm();
+  else if(S.editCpd) content=rCpdEditForm();
+  else if(S.deskTab==='dashboard') content=rDeskDashboard();
   else if(S.deskTab==='history') content=rDeskHistory();
   else if(S.deskTab==='streaks') content=rDeskStreaks();
   else if(S.deskTab==='labs') content=rLabs();
@@ -1041,7 +1044,11 @@ function rDeskRecentTable(days){
   var cutStr=cutoff.getFullYear()+'-'+pad(cutoff.getMonth()+1)+'-'+pad(cutoff.getDate());
   var recent=S.logs.filter(function(l){return l.date>=cutStr;}).sort(function(a,b){return (b.date+b.time).localeCompare(a.date+a.time);});
   if(!recent.length)return '<div class="empty" style="padding:2rem 0"><div class="empty-tx">No logs yet</div></div>';
-  var h='<div style="overflow-x:auto"><table class="data-table"><thead><tr><th>Date</th><th>Time</th><th>Compound</th><th>Dose</th><th>Route</th><th>Notes</th><th>Status</th></tr></thead><tbody>';
+  var h='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem">'
+    +'<div style="font-size:12px;color:var(--tx3)">'+icn('pencil')+' click to edit any entry</div>'
+    +'<button data-a="log-past" style="padding:6px 14px;background:var(--tx-info);color:#fff;border:none;border-radius:var(--r);font-size:13px;font-weight:500;font-family:var(--sans)">'+icn('plus')+' Log missed dose</button>'
+    +'</div>';
+  h+='<div style="overflow-x:auto"><table class="data-table"><thead><tr><th>Date</th><th>Time</th><th>Compound</th><th>Dose</th><th>Route</th><th>Notes</th><th>Status</th><th></th></tr></thead><tbody>';
   recent.forEach(function(l){
     var m=PMETA[l.proto]||{color:'#888'};
     var status=l.missed?'<span class="tpill tpill-err">Missed</span>':l.copied?'<span class="tpill tpill-info">Same</span>':l.quick?'<span class="tpill tpill-ok">Quick</span>':'<span class="tpill tpill-ok">Logged</span>';
@@ -1187,7 +1194,7 @@ function rHdr(){
   var syncDot=online?'<span style="width:6px;height:6px;border-radius:50%;background:var(--tx-ok);display:inline-block;margin-left:4px" title="Synced"></span>':'<span style="width:6px;height:6px;border-radius:50%;background:var(--tx-warn);display:inline-block;margin-left:4px" title="Offline - will sync when connected"></span>';
   return '<div class="hdr"><div class="hdr-left">'
     +'<span class="hdr-brand">Tony<span style="color:var(--tx-info);font-weight:700">\u00b3</span>'+syncDot+'</span>'
-    +'<span class="hdr-tag">T<span style="color:var(--tx-info);font-weight:700;font-size:17px">\u00b3</span> \u2014 longevity, performance, cognition <span style="font-size:10px;color:var(--tx3);font-family:var(--mono)">v0.14</span></span>'
+    +'<span class="hdr-tag">T<span style="color:var(--tx-info);font-weight:700;font-size:17px">\u00b3</span> \u2014 longevity, performance, cognition <span style="font-size:10px;color:var(--tx3);font-family:var(--mono)">v0.15</span></span>'
     +'</div>'+b+'</div>';
 }
 function rTabs(){
@@ -1604,7 +1611,7 @@ function onClick(e){
   else if(a==='save-lab-draw'){var dEl=document.getElementById('lab-date'),lEl=document.getElementById('lab-label');doSaveLabDraw(dEl?dEl.value:TODAY.str,lEl?lEl.value:'');}
   else if(a==='open-lab-detail'){S.labDetail=el.dataset.mid;render(false);}
   else if(a==='close-lab-detail'){S.labDetail=null;render(false);}
-  else if(a==='log-past'){S.logPast=true;render(false);}
+  else if(a==='log-past'){S.logPast=true;S.deskTab='history';render(false);}
   else if(a==='cancel-log-past'){S.logPast=false;render(false);}
   else if(a==='submit-log-past'){doLogPast();}
   else if(a==='hist-prev'){navHist(-1);}
