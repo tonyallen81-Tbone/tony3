@@ -294,7 +294,7 @@ var SEED=[
 ];
 
 // ── State ───────────────────────────────────────────────────────────────────
-var S={cpds:[],logs:[],vitals:[],tab:'today',deskTab:'dashboard',logging:null,editCpd:null,freshStart:false,vitalsOpen:false,loaded:false,savedDays:[],histDate:null};
+var S={cpds:[],logs:[],vitals:[],labResults:[],tab:'today',deskTab:'dashboard',labCat:'Hormonal',logging:null,editCpd:null,addingLab:false,freshStart:false,vitalsOpen:false,loaded:false,savedDays:[],histDate:null};
 var _ey=null,_ec=null;
 
 // ── Date helpers ────────────────────────────────────────────────────────────
@@ -371,12 +371,14 @@ function load(){
   var p2=sbGet('vitals','select=*&order=date.desc,time.desc').catch(function(){return [];});
   var p3=sbGet('saved_days','select=*').catch(function(){return [];});
   var p4=sbGet('compound_overrides','select=*').catch(function(){return [];});
+  var p5=sbGet('lab_results','select=*&order=draw_date.asc').catch(function(){return [];});
 
-  Promise.all([p1,p2,p3,p4]).then(function(results){
+  Promise.all([p1,p2,p3,p4,p5]).then(function(results){
     var logs=Array.isArray(results[0])?results[0]:[];
     var vitals=Array.isArray(results[1])?results[1]:[];
     var savedDays=Array.isArray(results[2])?results[2]:[];
     var overrides=Array.isArray(results[3])?results[3]:[];
+    var labRows=Array.isArray(results[4])?results[4]:[];
 
     // Map Supabase rows to app format
     S.logs=logs.map(function(r){return {
@@ -394,6 +396,22 @@ function load(){
     };});
 
     S.savedDays=savedDays.map(function(r){return r.date;});
+
+    // Map lab results
+    S.labResults=labRows.map(function(r){return {id:r.id,draw_date:r.draw_date,draw_label:r.draw_label||'',marker:r.marker,value:Number(r.value),unit:r.unit||'',flag:r.flag||'normal',notes:r.notes||''};});
+    // Only seed if Supabase returned nothing (first ever load)
+    if(labRows.length===0){
+      // Check local cache first
+      var cachedLabs=_ls.get('tony3_labs');
+      if(cachedLabs&&cachedLabs.length>0){
+        S.labResults=cachedLabs;
+      } else {
+        seedLabResults();
+      }
+    } else {
+      // Cache the Supabase results locally
+      _ls.set('tony3_labs',S.labResults);
+    }
 
     // Apply compound overrides
     var savedCpds=[];
@@ -648,6 +666,233 @@ function render(preserveScroll){
 }
 
 
+
+function pushLab(entry){
+  var row={id:entry.id,draw_date:entry.draw_date,draw_label:entry.draw_label||'',
+    marker:entry.marker,value:entry.value,unit:entry.unit||'',flag:entry.flag||'normal',notes:entry.notes||''};
+  sbUpsert('lab_results',row).catch(function(e){console.error('pushLab error:',e);});
+}
+
+function pushLabsBatch(entries){
+  if(!entries||!entries.length)return;
+  var rows=entries.map(function(e){return {id:e.id,draw_date:e.draw_date,draw_label:e.draw_label||'',
+    marker:e.marker,value:e.value,unit:e.unit||'',flag:e.flag||'normal',notes:e.notes||''};});
+  sbUpsert('lab_results',rows).then(function(r){
+    if(r&&!r.ok)r.text().then(function(t){console.warn('pushLabsBatch:',r.status,t.slice(0,200));});
+  }).catch(function(e){console.warn('pushLabsBatch failed (offline?):', e.message);});
+}
+
+function seedLabResults(){
+  S.labResults=LAB_DRAWS_SEED.map(function(d){return Object.assign({},d);});
+  // Cache locally immediately
+  _ls.set('tony3_cache',{logs:S.logs,vitals:S.vitals,savedDays:S.savedDays});
+  // Push to Supabase with retry
+  setTimeout(function(){
+    var rows=S.labResults.map(function(e){return {
+      id:e.id,draw_date:e.draw_date,draw_label:e.draw_label||'',
+      marker:e.marker,value:e.value,unit:e.unit||'',flag:e.flag||'normal',notes:e.notes||''
+    };});
+    sbUpsert('lab_results',rows).then(function(r){
+      if(r&&r.ok)console.log('Lab seed uploaded to Supabase');
+      else r&&r.text().then(function(t){console.warn('Lab seed response:',r.status,t);});
+    }).catch(function(e){
+      console.warn('Lab seed push failed, will retry on next load:',e.message);
+    });
+  },2000);
+}
+
+function getLabValue(marker,date){
+  var entries=S.labResults.filter(function(r){return r.marker===marker;});
+  if(date){return entries.find(function(r){return r.draw_date===date;})||null;}
+  entries.sort(function(a,b){return b.draw_date.localeCompare(a.draw_date);});
+  return entries.length?entries[0]:null;
+}
+
+function getLabHistory(marker){
+  return S.labResults.filter(function(r){return r.marker===marker;})
+    .sort(function(a,b){return a.draw_date.localeCompare(b.draw_date);});
+}
+
+function getDrawDates(){
+  var dates={};
+  S.labResults.forEach(function(r){if(!dates[r.draw_date])dates[r.draw_date]=r.draw_label||r.draw_date;});
+  return Object.keys(dates).sort(function(a,b){return b.localeCompare(a);});
+}
+
+function doSaveLabDraw(drawDate,drawLabel){
+  var inputs=document.querySelectorAll('[data-lab-marker]');
+  var newEntries=[];
+  inputs.forEach(function(inp){
+    var marker=inp.dataset.labMarker;
+    var val=parseFloat(inp.value);
+    if(isNaN(val))return;
+    var m=LAB_MARKERS.find(function(x){return x.id===marker;});
+    var flag='normal';
+    if(m){
+      if(m.flag_high!=null&&val>m.flag_high)flag='high';
+      else if(m.flag_low!=null&&val<m.flag_low)flag='low';
+      else if(val>m.target_high)flag='high';
+      else if(m.target_low!=null&&val<m.target_low)flag='low';
+    }
+    var entry={id:'lab_'+drawDate.replace(/-/g,'')+'_'+marker,draw_date:drawDate,draw_label:drawLabel||drawDate,
+      marker:marker,value:val,unit:m?m.unit:'',flag:flag,notes:''};
+    newEntries.push(entry);
+    // Remove old entry for same date+marker
+    S.labResults=S.labResults.filter(function(r){return !(r.draw_date===drawDate&&r.marker===marker);});
+  });
+  S.labResults=S.labResults.concat(newEntries);
+  pushLabsBatch(newEntries);
+  S.addingLab=false;
+  render(false);
+}
+
+
+function labStatusColor(flag){
+  if(flag==='high')return 'var(--tx-err)';
+  if(flag==='low')return 'var(--tx-warn)';
+  return 'var(--tx-ok)';
+}
+function labStatusBg(flag){
+  if(flag==='high')return 'var(--bg-err)';
+  if(flag==='low')return 'var(--bg-warn)';
+  return 'var(--bg-ok)';
+}
+function labTrendArrow(marker){
+  var hist=getLabHistory(marker);
+  if(hist.length<2)return '';
+  var prev=hist[hist.length-2].value,curr=hist[hist.length-1].value;
+  var diff=curr-prev;
+  var pct=Math.abs(diff/prev*100).toFixed(1);
+  var m=LAB_MARKERS.find(function(x){return x.id===marker;});
+  // For markers where lower is better (glucose, LDL, E2, etc)
+  var lowerBetter=['glucose_fasting','hba1c','creatinine','ldl','apob','non_hdl','triglycerides','hs_crp','glyca','estradiol','psa'];
+  var isLowerBetter=lowerBetter.indexOf(marker)>-1;
+  var improving=(isLowerBetter&&diff<0)||(!isLowerBetter&&diff>0);
+  var arrow=diff>0?'\u2191':'\u2193';
+  var color=improving?'var(--tx-ok)':'var(--tx-err)';
+  if(Math.abs(diff)<0.01)return '<span style="color:var(--tx3);font-size:11px">\u2192 stable</span>';
+  return '<span style="color:'+color+';font-size:11px;font-family:var(--mono)">'+arrow+' '+pct+'%</span>';
+}
+
+function rLabs(){
+  var cats=['Hormonal','Metabolic','CBC / Hematology','Lipids','Inflammation','Micronutrients'];
+  var drawDates=getDrawDates();
+
+  if(S.addingLab){
+    var h='<div class="body">';
+    h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">';
+    h+='<div style="font-size:16px;font-weight:600">New lab draw</div>';
+    h+='<button data-a="cancel-lab" style="background:none;border:none;color:var(--tx3);font-size:13px;font-family:var(--sans)">Cancel</button>';
+    h+='</div>';
+    h+='<div class="fi"><label class="fl" for="lab-date">Draw date</label><input type="date" id="lab-date" value="'+TODAY.str+'"></div>';
+    h+='<div class="fi"><label class="fl" for="lab-label">Draw label <span class="fl-opt">(optional)</span></label><input type="text" id="lab-label" placeholder="e.g. June 2026 labs" style="font-family:var(--sans)"></div>';
+    h+='<div style="font-size:11px;color:var(--tx3);margin-bottom:.875rem">Leave blank any markers not tested. Only filled values will be saved.</div>';
+    cats.forEach(function(cat){
+      var markers=LAB_MARKERS.filter(function(m){return m.cat===cat;});
+      h+='<div class="sec-hdr"><div class="sec-dot" style="background:var(--tx-info)"></div>'+cat+'</div>';
+      markers.forEach(function(m){
+        var latest=getLabValue(m.id,null);
+        h+='<div style="display:flex;align-items:center;gap:.625rem;padding:.4rem 0;border-bottom:.5px solid var(--bd)">';
+        h+='<div style="flex:1;font-size:13px;font-weight:500">'+esc(m.name)+'</div>';
+        h+='<div style="font-size:11px;color:var(--tx3);font-family:var(--mono);width:80px;text-align:right">'+(latest?latest.value+' '+latest.unit:'—')+'</div>';
+        h+='<div style="position:relative;width:110px"><input type="number" step="any" data-lab-marker="'+m.id+'" placeholder="new" style="padding:.375rem .625rem;font-size:13px;text-align:right;padding-right:36px">';
+        h+='<span style="position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:10px;color:var(--tx3);pointer-events:none;font-family:var(--mono)">'+esc(m.unit)+'</span></div>';
+        h+='</div>';
+      });
+    });
+    h+='<button class="btn-full" data-a="save-lab-draw" style="margin-top:1rem">Save lab draw</button>';
+    return h+'</div>';
+  }
+
+  var h='<div class="body">';
+
+  // Header with add button
+  h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem">';
+  h+='<div>';
+  h+='<div style="font-size:16px;font-weight:600">Lab results</div>';
+  h+='<div style="font-size:11px;color:var(--tx3)">'+drawDates.length+' draw'+(drawDates.length!==1?'s':'')+' on record</div>';
+  h+='</div>';
+  h+='<button data-a="add-lab" style="padding:6px 14px;background:var(--tx-info);color:#fff;border:none;border-radius:var(--r);font-size:13px;font-weight:500;font-family:var(--sans)">+ Add draw</button>';
+  h+='</div>';
+
+  // Next draw reminder
+  h+='<div style="background:var(--bg-warn);border:.5px solid var(--bd-warn);border-radius:var(--r);padding:.75rem;margin-bottom:.875rem;font-size:12px;color:var(--tx-warn);display:flex;align-items:center;gap:.5rem">';
+  h+=icn('clock')+' <strong>Next draw:</strong>&nbsp;June 2026 &mdash; Priority: E2 confirmation, HbA1c, fasting glucose, IGF-1 (first time), lipids, hematocrit';
+  h+='</div>';
+
+  // Category tabs
+  var labCats=['Hormonal','Metabolic','CBC / Hematology','Lipids','Inflammation','Micronutrients'];
+  h+='<div style="display:flex;gap:.375rem;flex-wrap:wrap;margin-bottom:.875rem">';
+  labCats.forEach(function(cat){
+    h+='<button class="desk-tab'+(S.labCat===cat?' on':'')+'" data-a="lab-cat" data-v="'+cat+'">'+cat+'</button>';
+  });
+  h+='</div>';
+
+  // Markers for selected category
+  var markers=LAB_MARKERS.filter(function(m){return m.cat===S.labCat;});
+
+  markers.forEach(function(m){
+    var hist=getLabHistory(m.id);
+    var latest=hist.length?hist[hist.length-1]:null;
+    var prev=hist.length>1?hist[hist.length-2]:null;
+    var flag=latest?latest.flag:'none';
+
+    h+='<div style="background:var(--bg2);border:.5px solid var(--bd);border-radius:var(--r);padding:.75rem;margin-bottom:.5rem">';
+
+    // Header row
+    h+='<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:.375rem">';
+    h+='<div style="font-size:13px;font-weight:600">'+esc(m.name)+'</div>';
+    if(latest){
+      h+='<div style="text-align:right">';
+      h+='<div style="font-size:18px;font-weight:700;font-family:var(--mono);color:'+labStatusColor(flag)+'">'+latest.value+'<span style="font-size:11px;font-weight:400;color:var(--tx3)"> '+esc(latest.unit)+'</span></div>';
+      h+='<div style="font-size:11px;color:var(--tx3)">'+latest.draw_date+' '+labTrendArrow(m.id)+'</div>';
+      h+='</div>';
+    }else{
+      h+='<div style="font-size:12px;color:var(--tx3);font-style:italic">Not yet measured</div>';
+    }
+    h+='</div>';
+
+    // Target bar
+    if(latest&&m.target_high){
+      var tLow=m.target_low||0;
+      var tHigh=m.target_high;
+      var fHigh=m.flag_high||tHigh*1.5;
+      var pct=Math.min(100,Math.max(0,((latest.value-tLow)/(fHigh-tLow))*100));
+      var targetPct=Math.min(100,((tHigh-tLow)/(fHigh-tLow))*100);
+      h+='<div style="position:relative;height:4px;background:var(--bd);border-radius:2px;margin:.375rem 0">';
+      h+='<div style="position:absolute;left:0;top:0;height:100%;width:'+targetPct+'%;background:var(--bg-ok);border-radius:2px"></div>';
+      h+='<div style="position:absolute;left:0;top:0;height:100%;width:'+pct+'%;background:'+labStatusColor(flag)+';border-radius:2px;transition:width .4s"></div>';
+      h+='</div>';
+      h+='<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--tx3);font-family:var(--mono);margin-bottom:.375rem">';
+      h+='<span>Target: '+tLow+'-'+tHigh+'</span>';
+      if(prev)h+='<span>Prev: '+prev.value+' ('+prev.draw_date+')</span>';
+      h+='</div>';
+    }
+
+    // History dots (one per draw)
+    if(hist.length>1){
+      h+='<div style="display:flex;gap:.375rem;align-items:center;margin-bottom:.375rem">';
+      hist.forEach(function(e){
+        var c=labStatusColor(e.flag);
+        h+='<div title="'+e.draw_date+': '+e.value+' '+e.unit+'" style="display:flex;flex-direction:column;align-items:center;gap:2px">';
+        h+='<div style="width:8px;height:8px;border-radius:50%;background:'+c+'"></div>';
+        h+='<div style="font-size:9px;color:var(--tx3);font-family:var(--mono)">'+e.draw_date.slice(2,7)+'</div>';
+        h+='</div>';
+      });
+      h+='</div>';
+    }
+
+    // Note
+    h+='<div style="font-size:11px;color:var(--tx3);font-style:italic;line-height:1.5">'+esc(m.note)+'</div>';
+    if(latest&&latest.notes){
+      h+='<div style="font-size:11px;color:var(--tx2);margin-top:2px">&ldquo;'+esc(latest.notes)+'&rdquo;</div>';
+    }
+    h+='</div>';
+  });
+
+  return h+'</div>';
+}
+
 function rDesktopLayout(){
   return '<div class="desktop-layout">'
     +'<div class="desktop-left">'+rContent()+'</div>'
@@ -660,6 +905,7 @@ function rDesktopRight(){
     {id:'dashboard',lb:'Dashboard'},
     {id:'history',lb:'Full Log'},
     {id:'streaks',lb:'Streaks'},
+    {id:'labs',lb:'Labs'},
     {id:'export',lb:'Export'}
   ];
   var nav='<div class="desktop-nav">'+tabs.map(function(t){
@@ -670,6 +916,7 @@ function rDesktopRight(){
   if(S.deskTab==='dashboard') content=rDeskDashboard();
   else if(S.deskTab==='history') content=rDeskHistory();
   else if(S.deskTab==='streaks') content=rDeskStreaks();
+  else if(S.deskTab==='labs') content=rLabs();
   else if(S.deskTab==='export') content=rDeskExport();
 
   return nav+content;
@@ -852,10 +1099,10 @@ function rHdr(){
     +'</div>'+b+'</div>';
 }
 function rTabs(){
-  var ts=[{id:'today',ic:'calendar-check',lb:'Today'},{id:'history',ic:'history',lb:'Log'},{id:'compounds',ic:'pill',lb:'Compounds'},{id:'protocols',ic:'stack-2',lb:'Protocols'}];
+  var ts=[{id:'today',ic:'calendar-check',lb:'Today'},{id:'history',ic:'history',lb:'Log'},{id:'compounds',ic:'pill',lb:'Compounds'},{id:'labs',ic:'test-pipe',lb:'Labs'},{id:'protocols',ic:'stack-2',lb:'Protocols'}];
   return '<div class="tabs">'+ts.map(function(t){return '<button class="tab'+(S.tab===t.id?' on':'')+'" data-a="tab" data-v="'+t.id+'">'+icn(t.ic)+'<span>'+t.lb+'</span></button>';}).join('')+'</div>';
 }
-function rContent(){if(S.tab==='today')return rToday();if(S.tab==='history')return rHistory();if(S.tab==='compounds')return rCompounds();return rProtocols();}
+function rContent(){if(S.tab==='today')return rToday();if(S.tab==='history')return rHistory();if(S.tab==='compounds')return rCompounds();if(S.tab==='labs')return rLabs();return rProtocols();}
 
 function rToday(){
   var act=S.cpds.filter(function(c){return c.status==='ACTIVE';});
@@ -1184,6 +1431,10 @@ function onClick(e){
   else if(a==='export-logs'){doExport('logs');}
   else if(a==='export-vitals'){doExport('vitals');}
   else if(a==='export-all'){doExport('all');}
+  else if(a==='add-lab'){S.addingLab=true;render(false);}
+  else if(a==='cancel-lab'){S.addingLab=false;render(false);}
+  else if(a==='lab-cat'){S.labCat=el.dataset.v;render(true);}
+  else if(a==='save-lab-draw'){var dEl=document.getElementById('lab-date'),lEl=document.getElementById('lab-label');doSaveLabDraw(dEl?dEl.value:TODAY.str,lEl?lEl.value:'');}
   else if(a==='hist-prev'){navHist(-1);}
   else if(a==='hist-next'){navHist(1);}
   else if(a==='open-log'){S.logging={cid:cid,sid:null,editId:null};render(false);}
@@ -1347,6 +1598,9 @@ var CPD_INFO = {
     timing:'1 cap morning for cognitive support throughout the day. 2 caps pre-bed for sleep architecture and overnight consolidation of learning.'
   },
 };
+
+var LAB_MARKERS = [{"id": "testosterone_total", "name": "Testosterone (Total)", "cat": "Hormonal", "unit": "ng/dL", "target_low": 600, "target_high": 900, "flag_high": 1100, "flag_low": 500, "note": "TRT target range. Above 900 = supraphysiologic on current dose."}, {"id": "testosterone_free", "name": "Testosterone (Free)", "cat": "Hormonal", "unit": "pg/mL", "target_low": 100, "target_high": 200, "flag_high": 300, "flag_low": 50, "note": "Free T drives androgen effects more than total T."}, {"id": "shbg", "name": "SHBG", "cat": "Hormonal", "unit": "nmol/L", "target_low": 20, "target_high": 50, "flag_high": 80, "flag_low": 10, "note": "Binds testosterone. Lower SHBG = more free T available."}, {"id": "estradiol", "name": "Estradiol (E2)", "cat": "Hormonal", "unit": "pg/mL", "target_low": 20, "target_high": 40, "flag_high": 60, "flag_low": 15, "note": "PRIMARY MARKER. Cognitive clarity bottleneck. Above 60 = high risk."}, {"id": "psa", "name": "PSA", "cat": "Hormonal", "unit": "ng/mL", "target_low": 0, "target_high": 2.5, "flag_high": 4.0, "flag_low": null, "note": "Monitor on TRT. Trend matters more than single value."}, {"id": "igf1", "name": "IGF-1", "cat": "Hormonal", "unit": "ng/mL", "target_low": 150, "target_high": 250, "flag_high": 350, "flag_low": 100, "note": "CJC-1295 efficacy signal. Not yet measured \u2014 add to June labs."}, {"id": "glucose_fasting", "name": "Fasting Glucose", "cat": "Metabolic", "unit": "mg/dL", "target_low": 70, "target_high": 90, "flag_high": 100, "flag_low": 60, "note": "Primary semaglutide + berberine efficacy signal. Target below 90."}, {"id": "hba1c", "name": "HbA1c", "cat": "Metabolic", "unit": "%", "target_low": 4.8, "target_high": 5.6, "flag_high": 5.7, "flag_low": null, "note": "3-month glucose average. CJC-1295 adds upward pressure \u2014 interpret in context."}, {"id": "creatinine", "name": "Creatinine", "cat": "Metabolic", "unit": "mg/dL", "target_low": 0.76, "target_high": 1.27, "flag_high": 1.6, "flag_low": null, "note": "Elevated by creatine at 20g/day. Interpret in context \u2014 likely artifact."}, {"id": "egfr", "name": "eGFR", "cat": "Metabolic", "unit": "mL/min", "target_low": 60, "target_high": 120, "flag_high": null, "flag_low": 45, "note": "Likely creatine artifact. Recheck at June labs."}, {"id": "bun", "name": "BUN", "cat": "Metabolic", "unit": "mg/dL", "target_low": 6, "target_high": 24, "flag_high": 30, "flag_low": null, "note": "Kidney function marker."}, {"id": "hematocrit", "name": "Hematocrit", "cat": "CBC / Hematology", "unit": "%", "target_low": 42, "target_high": 50, "flag_high": 52, "flag_low": 38, "note": "TRT drives RBC up over time. Above 52% = donate blood promptly."}, {"id": "hemoglobin", "name": "Hemoglobin", "cat": "CBC / Hematology", "unit": "g/dL", "target_low": 14.5, "target_high": 17.5, "flag_high": 18.0, "flag_low": 13.0, "note": "Tracks with hematocrit. Expected drop post-donation."}, {"id": "rbc", "name": "RBC", "cat": "CBC / Hematology", "unit": "x10E6/uL", "target_low": 4.5, "target_high": 5.8, "flag_high": 6.2, "flag_low": 4.0, "note": "Red blood cell count. TRT elevates over time."}, {"id": "wbc", "name": "WBC", "cat": "CBC / Hematology", "unit": "x10E3/uL", "target_low": 4.0, "target_high": 7.5, "flag_high": 10.8, "flag_low": 3.4, "note": "Immune health marker."}, {"id": "ferritin", "name": "Ferritin", "cat": "CBC / Hematology", "unit": "ng/mL", "target_low": 50, "target_high": 150, "flag_high": 300, "flag_low": 30, "note": "Iron stores. Must be above 50 before blood donation."}, {"id": "ldl", "name": "LDL-C", "cat": "Lipids", "unit": "mg/dL", "target_low": 0, "target_high": 100, "flag_high": 130, "flag_low": null, "note": "Elevated at 124. Berberine + fish oil should reduce. Watch June labs."}, {"id": "hdl", "name": "HDL-C", "cat": "Lipids", "unit": "mg/dL", "target_low": 50, "target_high": 90, "flag_high": null, "flag_low": 40, "note": "Good cholesterol. Exercise and fish oil raise HDL."}, {"id": "triglycerides", "name": "Triglycerides", "cat": "Lipids", "unit": "mg/dL", "target_low": 0, "target_high": 100, "flag_high": 150, "flag_low": null, "note": "Excellent at 55. Semaglutide and fish oil keep this low."}, {"id": "total_cholesterol", "name": "Total Cholesterol", "cat": "Lipids", "unit": "mg/dL", "target_low": 150, "target_high": 200, "flag_high": 240, "flag_low": null, "note": "Within range at 192."}, {"id": "apob", "name": "ApoB", "cat": "Lipids", "unit": "mg/dL", "target_low": 0, "target_high": 90, "flag_high": 100, "flag_low": null, "note": "Elevated at 101. Better CV risk marker than LDL. Target below 90."}, {"id": "non_hdl", "name": "Non-HDL Cholesterol", "cat": "Lipids", "unit": "mg/dL", "target_low": 0, "target_high": 130, "flag_high": 160, "flag_low": null, "note": "Elevated at 134. Will track with ApoB improvement."}, {"id": "hs_crp", "name": "hs-CRP", "cat": "Inflammation", "unit": "mg/L", "target_low": 0, "target_high": 0.5, "flag_high": 3.0, "flag_low": null, "note": "Excellent at 0.38. Low inflammation is your best cardiovascular signal."}, {"id": "glyca", "name": "GlycA", "cat": "Inflammation", "unit": "umol/L", "target_low": 0, "target_high": 400, "flag_high": 500, "flag_low": null, "note": "Systemic inflammatory marker. 345 is low risk range."}, {"id": "vitamin_d", "name": "Vitamin D (25-OH)", "cat": "Micronutrients", "unit": "ng/mL", "target_low": 40, "target_high": 80, "flag_high": 100, "flag_low": 30, "note": "Optimal at 58. D3 5,000-10,000 IU/day maintaining well."}, {"id": "tsh", "name": "TSH", "cat": "Micronutrients", "unit": "uIU/mL", "target_low": 0.5, "target_high": 2.5, "flag_high": 4.5, "flag_low": 0.45, "note": "Thyroid function. 1.26 is optimal."}, {"id": "t4_free", "name": "T4 Free", "cat": "Micronutrients", "unit": "ng/dL", "target_low": 0.9, "target_high": 1.7, "flag_high": 1.77, "flag_low": 0.82, "note": "Thyroid hormone. 1.52 is optimal."}];
+var LAB_DRAWS_SEED = [{"id": "lab_mar18_t", "draw_date": "2026-03-18", "draw_label": "March 2026", "marker": "testosterone_total", "value": 1277, "unit": "ng/dL", "flag": "high", "notes": "Supraphysiologic \u2014 dose reduced to 100mg after this draw"}, {"id": "lab_mar18_tf", "draw_date": "2026-03-18", "draw_label": "March 2026", "marker": "testosterone_free", "value": 340.8, "unit": "pg/mL", "flag": "high", "notes": ""}, {"id": "lab_mar18_shbg", "draw_date": "2026-03-18", "draw_label": "March 2026", "marker": "shbg", "value": 27.2, "unit": "nmol/L", "flag": "normal", "notes": ""}, {"id": "lab_mar18_e2", "draw_date": "2026-03-18", "draw_label": "March 2026", "marker": "estradiol", "value": 64.0, "unit": "pg/mL", "flag": "high", "notes": "Triggered dose reduction to 100mg TRT"}, {"id": "lab_mar18_psa", "draw_date": "2026-03-18", "draw_label": "March 2026", "marker": "psa", "value": 0.9, "unit": "ng/mL", "flag": "normal", "notes": ""}, {"id": "lab_mar18_gluc", "draw_date": "2026-03-18", "draw_label": "March 2026", "marker": "glucose_fasting", "value": 96, "unit": "mg/dL", "flag": "normal", "notes": "Fasting"}, {"id": "lab_mar18_a1c", "draw_date": "2026-03-18", "draw_label": "March 2026", "marker": "hba1c", "value": 5.8, "unit": "%", "flag": "high", "notes": "Pre-diabetic range \u2014 CJC-1295 adds upward pressure"}, {"id": "lab_mar18_creat", "draw_date": "2026-03-18", "draw_label": "March 2026", "marker": "creatinine", "value": 1.46, "unit": "mg/dL", "flag": "high", "notes": "Creatine 20g/day artifact \u2014 not true impairment"}, {"id": "lab_mar18_egfr", "draw_date": "2026-03-18", "draw_label": "March 2026", "marker": "egfr", "value": 58, "unit": "mL/min", "flag": "low", "notes": "Likely creatine artifact"}, {"id": "lab_mar18_bun", "draw_date": "2026-03-18", "draw_label": "March 2026", "marker": "bun", "value": 14, "unit": "mg/dL", "flag": "normal", "notes": ""}, {"id": "lab_mar18_hct", "draw_date": "2026-03-18", "draw_label": "March 2026", "marker": "hematocrit", "value": 49.0, "unit": "%", "flag": "normal", "notes": "Pre-donation \u2014 donated March 20"}, {"id": "lab_mar18_hgb", "draw_date": "2026-03-18", "draw_label": "March 2026", "marker": "hemoglobin", "value": 16.0, "unit": "g/dL", "flag": "normal", "notes": ""}, {"id": "lab_mar18_rbc", "draw_date": "2026-03-18", "draw_label": "March 2026", "marker": "rbc", "value": 5.77, "unit": "x10E6/uL", "flag": "normal", "notes": ""}, {"id": "lab_mar18_wbc", "draw_date": "2026-03-18", "draw_label": "March 2026", "marker": "wbc", "value": 5.4, "unit": "x10E3/uL", "flag": "normal", "notes": ""}, {"id": "lab_mar18_ferr", "draw_date": "2026-03-18", "draw_label": "March 2026", "marker": "ferritin", "value": 85, "unit": "ng/mL", "flag": "normal", "notes": ""}, {"id": "lab_mar18_ldl", "draw_date": "2026-03-18", "draw_label": "March 2026", "marker": "ldl", "value": 124, "unit": "mg/dL", "flag": "high", "notes": "Target below 100 \u2014 berberine + fish oil protocol started"}, {"id": "lab_mar18_hdl", "draw_date": "2026-03-18", "draw_label": "March 2026", "marker": "hdl", "value": 58, "unit": "mg/dL", "flag": "normal", "notes": ""}, {"id": "lab_mar18_trig", "draw_date": "2026-03-18", "draw_label": "March 2026", "marker": "triglycerides", "value": 55, "unit": "mg/dL", "flag": "normal", "notes": "Excellent"}, {"id": "lab_mar18_tc", "draw_date": "2026-03-18", "draw_label": "March 2026", "marker": "total_cholesterol", "value": 192, "unit": "mg/dL", "flag": "normal", "notes": ""}, {"id": "lab_mar18_apob", "draw_date": "2026-03-18", "draw_label": "March 2026", "marker": "apob", "value": 101, "unit": "mg/dL", "flag": "high", "notes": "Borderline high \u2014 target below 90"}, {"id": "lab_mar18_nonhdl", "draw_date": "2026-03-18", "draw_label": "March 2026", "marker": "non_hdl", "value": 134, "unit": "mg/dL", "flag": "high", "notes": ""}, {"id": "lab_mar18_crp", "draw_date": "2026-03-18", "draw_label": "March 2026", "marker": "hs_crp", "value": 0.38, "unit": "mg/L", "flag": "normal", "notes": "Excellent \u2014 low cardiovascular risk"}, {"id": "lab_mar18_glyca", "draw_date": "2026-03-18", "draw_label": "March 2026", "marker": "glyca", "value": 345, "unit": "umol/L", "flag": "normal", "notes": "Low risk range"}, {"id": "lab_mar18_vitd", "draw_date": "2026-03-18", "draw_label": "March 2026", "marker": "vitamin_d", "value": 58.0, "unit": "ng/mL", "flag": "normal", "notes": "Optimal range"}, {"id": "lab_mar18_tsh", "draw_date": "2026-03-18", "draw_label": "March 2026", "marker": "tsh", "value": 1.26, "unit": "uIU/mL", "flag": "normal", "notes": ""}, {"id": "lab_mar18_t4", "draw_date": "2026-03-18", "draw_label": "March 2026", "marker": "t4_free", "value": 1.52, "unit": "ng/dL", "flag": "normal", "notes": ""}, {"id": "lab_apr10_t", "draw_date": "2026-04-10", "draw_label": "April 2026", "marker": "testosterone_total", "value": 852, "unit": "ng/dL", "flag": "normal", "notes": "Normalized after dose reduction to 100mg"}, {"id": "lab_apr10_e2", "draw_date": "2026-04-10", "draw_label": "April 2026", "marker": "estradiol", "value": 36.5, "unit": "pg/mL", "flag": "normal", "notes": "Normalized from 64.0 \u2014 23 days post dose reduction"}, {"id": "lab_apr10_psa", "draw_date": "2026-04-10", "draw_label": "April 2026", "marker": "psa", "value": 0.8, "unit": "ng/mL", "flag": "normal", "notes": ""}, {"id": "lab_apr10_gluc", "draw_date": "2026-04-10", "draw_label": "April 2026", "marker": "glucose_fasting", "value": 104, "unit": "mg/dL", "flag": "high", "notes": "Fasting \u2014 elevated, semaglutide at 10 IU"}, {"id": "lab_apr10_creat", "draw_date": "2026-04-10", "draw_label": "April 2026", "marker": "creatinine", "value": 1.45, "unit": "mg/dL", "flag": "high", "notes": "Creatine artifact \u2014 stable"}, {"id": "lab_apr10_egfr", "draw_date": "2026-04-10", "draw_label": "April 2026", "marker": "egfr", "value": 59, "unit": "mL/min", "flag": "normal", "notes": "Slight improvement from 58"}, {"id": "lab_apr10_hct", "draw_date": "2026-04-10", "draw_label": "April 2026", "marker": "hematocrit", "value": 46.3, "unit": "%", "flag": "normal", "notes": "Post-donation drop from 49% \u2014 as expected"}, {"id": "lab_apr10_hgb", "draw_date": "2026-04-10", "draw_label": "April 2026", "marker": "hemoglobin", "value": 15.0, "unit": "g/dL", "flag": "normal", "notes": "Post-donation"}, {"id": "lab_apr10_rbc", "draw_date": "2026-04-10", "draw_label": "April 2026", "marker": "rbc", "value": 5.42, "unit": "x10E6/uL", "flag": "normal", "notes": ""}, {"id": "lab_apr10_wbc", "draw_date": "2026-04-10", "draw_label": "April 2026", "marker": "wbc", "value": 5.1, "unit": "x10E3/uL", "flag": "normal", "notes": ""}, {"id": "lab_apr10_bun", "draw_date": "2026-04-10", "draw_label": "April 2026", "marker": "bun", "value": 16, "unit": "mg/dL", "flag": "normal", "notes": ""}];
 
 load();
 </script>
