@@ -665,9 +665,9 @@ function render(preserveScroll){
   var el=document.getElementById('app');
   if(!S.loaded){el.innerHTML='<div style="padding:3rem;text-align:center;color:#9ca3af;font-family:system-ui">Loading Tony\u00b3...</div>';return;}
   var sy=preserveScroll?window.scrollY:0;
-  if(S.logging&&window.innerWidth<768)el.innerHTML=rLogForm();
-  else if(S.editCpd&&window.innerWidth<768)el.innerHTML=rCpdEditForm();
-  else if(S.logPast&&window.innerWidth<768)el.innerHTML=rLogPastForm();
+  if(S.logging)el.innerHTML=rLogForm();
+  else if(S.editCpd)el.innerHTML=rCpdEditForm();
+  else if(S.logPast)el.innerHTML=rLogPastForm();
   else el.innerHTML=rHdr()+rTabs()+rDesktopLayout();
   bind();
   if(preserveScroll)requestAnimationFrame(function(){window.scrollTo(0,sy);});
@@ -1012,9 +1012,7 @@ function rDesktopRight(){
   }).join('')+'</div>';
 
   var content='';
-  if(S.logPast) content=rLogPastForm();
-  else if(S.logging) content=rLogForm();
-  else if(S.editCpd) content=rCpdEditForm();
+  if(S.editCpd) content=rCpdEditForm();
   else if(S.deskTab==='dashboard') content=rDeskDashboard();
   else if(S.deskTab==='history') content=rDeskHistory();
   else if(S.deskTab==='streaks') content=rDeskStreaks();
@@ -1202,7 +1200,7 @@ function rHdr(){
   var syncDot=online?'<span style="width:6px;height:6px;border-radius:50%;background:var(--tx-ok);display:inline-block;margin-left:4px" title="Synced"></span>':'<span style="width:6px;height:6px;border-radius:50%;background:var(--tx-warn);display:inline-block;margin-left:4px" title="Offline - will sync when connected"></span>';
   return '<div class="hdr"><div class="hdr-left">'
     +'<span class="hdr-brand">Tony<span style="color:var(--tx-info);font-weight:700">\u00b3</span>'+syncDot+'</span>'
-    +'<span class="hdr-tag">T<span style="color:var(--tx-info);font-weight:700;font-size:17px">\u00b3</span> \u2014 longevity, performance, cognition <span style="font-size:10px;color:var(--tx3);font-family:var(--mono)">v0.27</span></span>'
+    +'<span class="hdr-tag">T<span style="color:var(--tx-info);font-weight:700;font-size:17px">\u00b3</span> \u2014 longevity, performance, cognition <span style="font-size:10px;color:var(--tx3);font-family:var(--mono)">v0.28</span></span>'
     +'</div>'+b+'</div>';
 }
 function rTabs(){
@@ -1597,17 +1595,17 @@ function rLogForm(){
 function bind(){
   document.querySelectorAll('[data-a]').forEach(function(el){el.addEventListener('click',onClick);});
   // Direct ID bindings for back buttons (bypasses data-a for reliability)
-  // Direct bindings for back buttons - simple and reliable
+  // Direct bindings for back buttons
   var _backMap={'btn-back-past':goBackPast,'btn-back-cpd':goBackCpd,'btn-back-log':goBack};
-  Object.keys(_backMap).forEach(function(id){
-    var el=document.getElementById(id);
-    if(!el)return;
-    el.addEventListener('click',function(e){
-      e.preventDefault();
-      e.stopPropagation();
-      _backMap[id]();
-    },true); // useCapture=true catches event before bubbling issues
-  });
+  function bindBackBtns(){
+    Object.keys(_backMap).forEach(function(id){
+      var el=document.getElementById(id);
+      if(!el)return;
+      el.onclick=function(e){e.preventDefault();e.stopPropagation();_backMap[id]();return false;};
+    });
+  }
+  bindBackBtns();
+  setTimeout(bindBackBtns,100);
   document.querySelectorAll('[data-eg] .e-btn').forEach(function(b){
     b.addEventListener('click',function(){
       var type=b.closest('[data-eg]').dataset.eg,val=+b.dataset.n;
