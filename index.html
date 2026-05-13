@@ -294,7 +294,7 @@ var SEED=[
 ];
 
 // ── State ───────────────────────────────────────────────────────────────────
-var S={cpds:[],logs:[],vitals:[],labResults:[],tab:'today',deskTab:'dashboard',labCat:'Hormonal',labDetail:null,logging:null,editCpd:null,addingLab:false,logPast:false,prevTab:null,freshStart:false,vitalsOpen:false,loaded:false,savedDays:[],histDate:null};
+var S={cpds:[],logs:[],vitals:[],labResults:[],journal:[],tab:'today',deskTab:'dashboard',labCat:'Hormonal',labDetail:null,logging:null,editCpd:null,addingLab:false,logPast:false,addingJournal:false,editJournalId:null,prevTab:null,freshStart:false,vitalsOpen:false,loaded:false,savedDays:[],histDate:null};
 var _ey=null,_ec=null;
 
 // ── Date helpers ────────────────────────────────────────────────────────────
@@ -372,13 +372,15 @@ function load(){
   var p3=sbGet('saved_days','select=*').catch(function(){return [];});
   var p4=sbGet('compound_overrides','select=*').catch(function(){return [];});
   var p5=sbGet('lab_results','select=*&order=draw_date.asc').catch(function(){return [];});
+  var p6=sbGet('journal_entries','select=*&order=entry_date.desc').catch(function(){return [];});
 
-  Promise.all([p1,p2,p3,p4,p5]).then(function(results){
+  Promise.all([p1,p2,p3,p4,p5,p6]).then(function(results){
     var logs=Array.isArray(results[0])?results[0]:[];
     var vitals=Array.isArray(results[1])?results[1]:[];
     var savedDays=Array.isArray(results[2])?results[2]:[];
     var overrides=Array.isArray(results[3])?results[3]:[];
     var labRows=Array.isArray(results[4])?results[4]:[];
+    var journalRows=Array.isArray(results[5])?results[5]:[];
 
     // Map Supabase rows to app format
     S.logs=logs.map(function(r){return {
@@ -409,7 +411,12 @@ function load(){
         seedLabResults();
       }
     } else {
-      // Cache the Supabase results locally
+      S.journal=journalRows.map(function(r){return {
+      id:r.id,entry_date:r.entry_date,week_label:r.week_label||'',
+      body:r.body||'',mood:r.mood||null,energy:r.energy||null,
+      created_at:r.created_at
+    };});
+    // Cache the Supabase results locally
       _ls.set('tony3_labs',S.labResults);
     }
 
@@ -665,7 +672,8 @@ function render(preserveScroll){
   var el=document.getElementById('app');
   if(!S.loaded){el.innerHTML='<div style="padding:3rem;text-align:center;color:#9ca3af;font-family:system-ui">Loading Tony\u00b3...</div>';return;}
   var sy=preserveScroll?window.scrollY:0;
-  if(S.logging)el.innerHTML=rLogForm();
+  if(S.addingJournal||S.editJournalId)el.innerHTML=rJournal();
+  else if(S.logging)el.innerHTML=rLogForm();
   else if(S.editCpd)el.innerHTML=rCpdEditForm();
   else if(S.logPast)el.innerHTML=rLogPastForm();
   else el.innerHTML=rHdr()+rTabs()+rDesktopLayout();
@@ -992,6 +1000,111 @@ function rLabs(){
 }
 
 
+
+function pushJournal(entry){
+  sbUpsert('journal_entries',{
+    id:entry.id,entry_date:entry.entry_date,week_label:entry.week_label||'',
+    body:entry.body||'',mood:entry.mood||null,energy:entry.energy||null
+  }).catch(function(e){console.warn('pushJournal error:',e.message);});
+}
+
+function deleteJournal(id){
+  sbDelete('journal_entries','id',id).catch(function(e){console.warn('deleteJournal error:',e.message);});
+}
+
+function doSaveJournal(){
+  var dateEl=document.getElementById('jnl-date');
+  var labelEl=document.getElementById('jnl-label');
+  var bodyEl=document.getElementById('jnl-body');
+  var moodEl=document.getElementById('jnl-mood');
+  if(!bodyEl||!bodyEl.value.trim())return;
+  var entry={
+    id:S.editJournalId||('j'+Date.now()),
+    entry_date:dateEl?dateEl.value:TODAY.str,
+    week_label:labelEl?labelEl.value:'',
+    body:bodyEl.value.trim(),
+    mood:moodEl?parseInt(moodEl.value)||null:null,
+    energy:null,
+    created_at:new Date().toISOString()
+  };
+  if(S.editJournalId){
+    S.journal=S.journal.map(function(j){return j.id===S.editJournalId?entry:j;});
+  }else{
+    S.journal=[entry].concat(S.journal);
+  }
+  pushJournal(entry);
+  S.addingJournal=false;
+  S.editJournalId=null;
+  save();render(false);
+}
+
+
+function rJournal(){
+  // Entry form
+  if(S.addingJournal||S.editJournalId){
+    var existing=S.editJournalId?S.journal.find(function(j){return j.id===S.editJournalId;}):null;
+    var h='<div>';
+    h+='<div class="form-hdr">';
+    h+='<button class="back-btn" id="btn-back-journal">'+icn('arrow-left')+' Back</button>';
+    h+='<span class="form-title">'+(existing?'Edit entry':'New journal entry')+'</span>';
+    h+='</div>';
+    h+='<div class="form-body">';
+    h+='<div class="fi"><label class="fl" for="jnl-date">Date</label>';
+    h+='<input type="date" id="jnl-date" value="'+(existing?existing.entry_date:TODAY.str)+'"></div>';
+    h+='<div class="fi"><label class="fl" for="jnl-label">Week / period label <span class="fl-opt">(optional)</span></label>';
+    h+='<input type="text" id="jnl-label" placeholder="e.g. Week 1 on Berberine" value="'+(existing?esc(existing.week_label||''):'')+'"></div>';
+    h+='<div class="fi"><label class="fl" for="jnl-mood">Overall mood this week <span class="fl-opt">(1-10)</span></label>';
+    h+='<input type="number" id="jnl-mood" min="1" max="10" placeholder="1-10" value="'+(existing&&existing.mood?existing.mood:'')+'"></div>';
+    h+='<div class="fi"><label class="fl" for="jnl-body">Journal entry</label>';
+    h+='<textarea id="jnl-body" style="height:220px;line-height:1.7" placeholder="How are you feeling this week? What are you noticing? Energy, clarity, sleep, training, side effects...">'+(existing?esc(existing.body||''):'')+'</textarea></div>';
+    h+='<button class="btn-full" data-a="save-journal">Save entry</button>';
+    h+='</div></div>';
+    return h;
+  }
+
+  // Journal list view
+  var h='<div class="body">';
+  h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem">';
+  h+='<div><div style="font-size:16px;font-weight:600">Protocol journal</div>';
+  h+='<div style="font-size:11px;color:var(--tx3)">'+S.journal.length+' entr'+(S.journal.length===1?'y':'ies')+' · weekly observations</div></div>';
+  h+='<button data-a="add-journal" style="padding:6px 14px;background:var(--tx-info);color:#fff;border:none;border-radius:var(--r);font-size:13px;font-weight:500;font-family:var(--sans)">+ New entry</button>';
+  h+='</div>';
+
+  // Prompt card if no entries
+  if(!S.journal.length){
+    h+='<div style="background:var(--bg2);border:.5px solid var(--bd);border-radius:var(--rl);padding:1.25rem;margin-bottom:.875rem">';
+    h+='<div style="font-size:14px;font-weight:600;margin-bottom:.5rem">Start your protocol journal</div>';
+    h+='<div style="font-size:13px;color:var(--tx2);line-height:1.7">Write a weekly entry about what you are noticing. Energy, cognitive clarity, sleep quality, training performance, side effects, mood. These narrative notes alongside your quantitative data will be invaluable when you look back in 3-6 months.</div>';
+    h+='<div style="font-size:12px;color:var(--tx3);margin-top:.75rem;font-style:italic">Suggested: one entry per week, every Sunday.</div>';
+    h+='</div>';
+    return h+'</div>';
+  }
+
+  // Entries list
+  S.journal.forEach(function(entry){
+    var mood=entry.mood;
+    var moodColor=mood>=8?'var(--tx-ok)':mood>=5?'var(--tx-warn)':'var(--tx-err)';
+    var preview=entry.body.length>200?entry.body.slice(0,200)+'...':entry.body;
+    h+='<div style="background:var(--bg2);border:.5px solid var(--bd);border-radius:var(--rl);padding:.875rem;margin-bottom:.625rem">';
+    // Header
+    h+='<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:.5rem">';
+    h+='<div>';
+    h+='<div style="font-size:13px;font-weight:600">'+(entry.week_label?esc(entry.week_label):new Date(entry.entry_date+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'}))+'</div>';
+    h+='<div style="font-size:11px;color:var(--tx3);font-family:var(--mono)">'+entry.entry_date+'</div>';
+    h+='</div>';
+    h+='<div style="display:flex;align-items:center;gap:.5rem">';
+    if(mood)h+='<div style="font-size:12px;font-weight:600;color:'+moodColor+';font-family:var(--mono)">'+mood+'/10</div>';
+    h+='<button class="btn-edit" data-a="edit-journal" data-jid="'+entry.id+'">'+icn('pencil')+'</button>';
+    h+='<button class="btn-edit" data-a="delete-journal" data-jid="'+entry.id+'" style="color:var(--tx-err)">'+icn('trash')+'</button>';
+    h+='</div></div>';
+    // Body preview
+    h+='<div style="font-size:13px;color:var(--tx2);line-height:1.7;white-space:pre-wrap">'+esc(preview)+'</div>';
+    h+='</div>';
+  });
+
+  return h+'</div>';
+}
+
 function rDesktopLayout(){
   return '<div class="desktop-layout">'
     +'<div class="desktop-left">'+rContent()+'</div>'
@@ -1005,6 +1118,7 @@ function rDesktopRight(){
     {id:'history',lb:'Full Log'},
     {id:'streaks',lb:'Streaks'},
     {id:'labs',lb:'Labs'},
+    {id:'journal',lb:'Journal'},
     {id:'export',lb:'Export'}
   ];
   var nav='<div class="desktop-nav">'+tabs.map(function(t){
@@ -1017,6 +1131,7 @@ function rDesktopRight(){
   else if(S.deskTab==='history') content=rDeskHistory();
   else if(S.deskTab==='streaks') content=rDeskStreaks();
   else if(S.deskTab==='labs') content=rLabs();
+  else if(S.deskTab==='journal') content=rJournal();
   else if(S.deskTab==='export') content=rDeskExport();
 
   return nav+content;
@@ -1259,14 +1374,14 @@ function rHdr(){
   var syncDot=online?'<span style="width:6px;height:6px;border-radius:50%;background:var(--tx-ok);display:inline-block;margin-left:4px" title="Synced"></span>':'<span style="width:6px;height:6px;border-radius:50%;background:var(--tx-warn);display:inline-block;margin-left:4px" title="Offline - will sync when connected"></span>';
   return '<div class="hdr"><div class="hdr-left">'
     +'<span class="hdr-brand">Tony<span style="color:var(--tx-info);font-weight:700">\u00b3</span>'+syncDot+'</span>'
-    +'<span class="hdr-tag">T<span style="color:var(--tx-info);font-weight:700;font-size:17px">\u00b3</span> \u2014 longevity, performance, cognition <span style="font-size:10px;color:var(--tx3);font-family:var(--mono)">v0.31</span></span>'
+    +'<span class="hdr-tag">T<span style="color:var(--tx-info);font-weight:700;font-size:17px">\u00b3</span> \u2014 longevity, performance, cognition <span style="font-size:10px;color:var(--tx3);font-family:var(--mono)">v0.32</span></span>'
     +'</div>'+b+'</div>';
 }
 function rTabs(){
-  var ts=[{id:'today',ic:'calendar-check',lb:'Today'},{id:'history',ic:'history',lb:'Log'},{id:'compounds',ic:'pill',lb:'Compounds'},{id:'labs',ic:'test-pipe',lb:'Labs'},{id:'protocols',ic:'stack-2',lb:'Protocols'}];
+  var ts=[{id:'today',ic:'calendar-check',lb:'Today'},{id:'history',ic:'history',lb:'Log'},{id:'compounds',ic:'pill',lb:'Compounds'},{id:'labs',ic:'test-pipe',lb:'Labs'},{id:'journal',ic:'notebook',lb:'Journal'},{id:'protocols',ic:'stack-2',lb:'Protocols'}];
   return '<div class="tabs">'+ts.map(function(t){return '<button class="tab'+(S.tab===t.id?' on':'')+'" data-a="tab" data-v="'+t.id+'">'+icn(t.ic)+'<span>'+t.lb+'</span></button>';}).join('')+'</div>';
 }
-function rContent(){if(S.tab==='today')return rToday();if(S.tab==='history')return rHistory();if(S.tab==='compounds')return rCompounds();if(S.tab==='labs')return rLabs();return rProtocols();}
+function rContent(){if(S.tab==='today')return rToday();if(S.tab==='history')return rHistory();if(S.tab==='compounds')return rCompounds();if(S.tab==='labs')return rLabs();if(S.tab==='journal')return rJournal();return rProtocols();}
 
 function rToday(){
   var act=S.cpds.filter(function(c){return c.status==='ACTIVE';});
@@ -1654,7 +1769,7 @@ function bind(){
   document.querySelectorAll('[data-a]').forEach(function(el){el.addEventListener('click',onClick);});
   // Direct ID bindings for back buttons (bypasses data-a for reliability)
   // Direct bindings for back buttons
-  var _backMap={'btn-back-past':goBackPast,'btn-back-cpd':goBackCpd,'btn-back-log':goBack};
+  var _backMap={'btn-back-past':goBackPast,'btn-back-cpd':goBackCpd,'btn-back-log':goBack,'btn-back-journal':function(){S.addingJournal=false;S.editJournalId=null;if(S.prevTab)S.tab=S.prevTab;render(false);}};
   function bindBackBtns(){
     Object.keys(_backMap).forEach(function(id){
       var el=document.getElementById(id);
@@ -1694,6 +1809,10 @@ function onClick(e){
   else if(a==='log-past'){S.logPast=true;S.tab='history';S.deskTab='history';render(false);}
   else if(a==='cancel-log-past'){S.logPast=false;S.tab='history';render(false);}
   else if(a==='submit-log-past'){doLogPast();}
+  else if(a==='add-journal'){S.addingJournal=true;S.editJournalId=null;S.prevTab=S.tab;render(false);}
+  else if(a==='save-journal'){doSaveJournal();}
+  else if(a==='edit-journal'){S.editJournalId=el.dataset.jid;S.addingJournal=false;S.prevTab=S.tab;render(false);}
+  else if(a==='delete-journal'){if(confirm('Delete this journal entry?')){S.journal=S.journal.filter(function(j){return j.id!==el.dataset.jid;});deleteJournal(el.dataset.jid);save();render(false);}}
   else if(a==='hist-prev'){navHist(-1);}
   else if(a==='hist-next'){navHist(1);}
   else if(a==='open-log'){S.prevTab=S.tab;S.logging={cid:cid,sid:null,editId:null};render(false);}
