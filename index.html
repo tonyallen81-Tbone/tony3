@@ -1200,7 +1200,7 @@ function rHdr(){
   var syncDot=online?'<span style="width:6px;height:6px;border-radius:50%;background:var(--tx-ok);display:inline-block;margin-left:4px" title="Synced"></span>':'<span style="width:6px;height:6px;border-radius:50%;background:var(--tx-warn);display:inline-block;margin-left:4px" title="Offline - will sync when connected"></span>';
   return '<div class="hdr"><div class="hdr-left">'
     +'<span class="hdr-brand">Tony<span style="color:var(--tx-info);font-weight:700">\u00b3</span>'+syncDot+'</span>'
-    +'<span class="hdr-tag">T<span style="color:var(--tx-info);font-weight:700;font-size:17px">\u00b3</span> \u2014 longevity, performance, cognition <span style="font-size:10px;color:var(--tx3);font-family:var(--mono)">v0.28</span></span>'
+    +'<span class="hdr-tag">T<span style="color:var(--tx-info);font-weight:700;font-size:17px">\u00b3</span> \u2014 longevity, performance, cognition <span style="font-size:10px;color:var(--tx3);font-family:var(--mono)">v0.30</span></span>'
     +'</div>'+b+'</div>';
 }
 function rTabs(){
@@ -1437,7 +1437,6 @@ function rHistory(){
   if(!entries.length){h+='<div class="empty"><div class="empty-tx">No entries for this day</div></div>';return h+'</div>';}
   var h2='';
   entries.forEach(function(e){
-    grps[d].forEach(function(e){
       if(e._t==='vitals'){
         var parts=[];
         if(e.energyYest!=null)parts.push('Yesterday '+e.energyYest+'/10');
@@ -1466,7 +1465,6 @@ function rHistory(){
         h+='</div></div>';
       }
     });
-  });
   return h+'</div>';
 }
 
