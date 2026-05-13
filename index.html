@@ -655,9 +655,10 @@ function doUnlockDay(){
 
 
 // ── Global click helpers (called from inline onclick) ───────────────────────
-function goBack(){S.logging=null;if(S.prevTab)S.tab=S.prevTab;render(false);}
-function goBackCpd(){S.editCpd=null;if(S.prevTab)S.tab=S.prevTab;render(false);}
-function goBackPast(){S.logPast=false;S.tab=S.prevTab||'history';render(false);}
+function goBack(){console.log('goBack called');S.logging=null;if(S.prevTab)S.tab=S.prevTab;render(false);}
+function goBackCpd(){console.log('goBackCpd called');S.editCpd=null;if(S.prevTab)S.tab=S.prevTab;render(false);}
+function goBackPast(){console.log('goBackPast called');S.logPast=false;S.tab=S.prevTab||'history';render(false);}
+window.goBack=goBack;window.goBackCpd=goBackCpd;window.goBackPast=goBackPast;window.doLogPast=doLogPast;
 
 // ── Render ──────────────────────────────────────────────────────────────────
 function render(preserveScroll){
@@ -1200,7 +1201,7 @@ function rHdr(){
   var syncDot=online?'<span style="width:6px;height:6px;border-radius:50%;background:var(--tx-ok);display:inline-block;margin-left:4px" title="Synced"></span>':'<span style="width:6px;height:6px;border-radius:50%;background:var(--tx-warn);display:inline-block;margin-left:4px" title="Offline - will sync when connected"></span>';
   return '<div class="hdr"><div class="hdr-left">'
     +'<span class="hdr-brand">Tony<span style="color:var(--tx-info);font-weight:700">\u00b3</span>'+syncDot+'</span>'
-    +'<span class="hdr-tag">T<span style="color:var(--tx-info);font-weight:700;font-size:17px">\u00b3</span> \u2014 longevity, performance, cognition <span style="font-size:10px;color:var(--tx3);font-family:var(--mono)">v0.23</span></span>'
+    +'<span class="hdr-tag">T<span style="color:var(--tx-info);font-weight:700;font-size:17px">\u00b3</span> \u2014 longevity, performance, cognition <span style="font-size:10px;color:var(--tx3);font-family:var(--mono)">v0.24</span></span>'
     +'</div>'+b+'</div>';
 }
 function rTabs(){
@@ -1348,7 +1349,7 @@ function rLogPastForm(){
   var visible=S.cpds.filter(function(c){return c.status!=='PAUSED'&&c.status!=='DISCONTINUED';});
   var h='<div>';
   h+='<div class="form-hdr">';
-  h+='<button class="back-btn" onclick="goBackPast()">'+icn('arrow-left')+' Back</button>';
+  h+='<button class="back-btn" id="btn-back-past">'+icn('arrow-left')+' Back</button>';
   h+='<span class="form-title">Add past entry</span>';
   h+='</div>';
   h+='<div class="form-body">';
@@ -1514,7 +1515,7 @@ function rCpdEditForm(){
   var c=S.cpds.find(function(x){return x.id===S.editCpd;});
   if(!c)return rHdr()+rTabs()+rContent();
   var m=PMETA[c.protocol]||{color:'#888'};
-  var h='<div><div class="form-hdr"><button class="back-btn" onclick="goBackCpd()">'+icn('arrow-left')+' Back</button><span class="form-title">Edit compound</span></div>'
+  var h='<div><div class="form-hdr"><button class="back-btn" id="btn-back-cpd">'+icn('arrow-left')+' Back</button><span class="form-title">Edit compound</span></div>'
     +'<div class="form-body"><div class="form-proto" style="color:'+m.color+'">'+esc(c.protocol)+'</div><div class="form-nm">'+esc(c.name)+'</div>';
   if(c.splits){
     h+='<div style="margin-bottom:.75rem;padding:.625rem;background:var(--bg2);border-radius:var(--r);font-size:12px;color:var(--tx2)">Split dosing \u2014 edit each entry below</div>';
@@ -1572,7 +1573,7 @@ function rLogForm(){
   var defTime=existing?existing.time:DEFAULT_TIME;
   var defMissed=existing?existing.missed:false;
   var subLbl=split?esc(split.label)+' \u00b7 '+split.dose+split.unit:(c.dose!=null?c.dose+c.unit:'Enter dose below');
-  return '<div><div class="form-hdr"><button class="back-btn" onclick="goBack()">'+icn('arrow-left')+' Back</button>'
+  return '<div><div class="form-hdr"><button class="back-btn" id="btn-back-log">'+icn('arrow-left')+' Back</button>'
     +'<span class="form-title">'+(editId?'Edit dose':'Log dose')+'</span></div>'
     +'<div class="form-body"><div class="form-proto" style="color:'+m.color+'">'+esc(c.protocol)+'</div>'
     +'<div class="form-nm">'+esc(c.name)+'</div>'
@@ -1594,6 +1595,13 @@ function rLogForm(){
 // ── Event binding ───────────────────────────────────────────────────────────
 function bind(){
   document.querySelectorAll('[data-a]').forEach(function(el){el.addEventListener('click',onClick);});
+  // Direct ID bindings for back buttons (bypasses data-a for reliability)
+  var bpl=document.getElementById('btn-back-past');
+  var bcp=document.getElementById('btn-back-cpd');
+  var blg=document.getElementById('btn-back-log');
+  if(bpl)bpl.addEventListener('click',function(e){e.stopPropagation();goBackPast();});
+  if(bcp)bcp.addEventListener('click',function(e){e.stopPropagation();goBackCpd();});
+  if(blg)blg.addEventListener('click',function(e){e.stopPropagation();goBack();});
   document.querySelectorAll('[data-eg] .e-btn').forEach(function(b){
     b.addEventListener('click',function(){
       var type=b.closest('[data-eg]').dataset.eg,val=+b.dataset.n;
