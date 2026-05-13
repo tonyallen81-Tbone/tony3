@@ -1073,8 +1073,67 @@ function rDeskRecentTable(days){
 }
 
 function rDeskHistory(){
-  var html='<div class="desk-section-title">Complete log history</div>';
-  html+=rDeskRecentTable(365);
+  var allDates=histDates();
+  if(!S.histDate||allDates.indexOf(S.histDate)===-1)S.histDate=allDates[0]||TODAY.str;
+  var curIdx=allDates.indexOf(S.histDate);
+  var canPrev=curIdx<allDates.length-1, canNext=curIdx>0;
+  var dateLbl=S.histDate===TODAY.str
+    ?'Today — '+new Date(TODAY.str+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'})
+    :new Date(S.histDate+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+  var saved=isSaved(S.histDate);
+  var html='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;background:var(--bg2);border:.5px solid var(--bd);border-radius:var(--rl);padding:.75rem 1rem">'
+    +'<button data-a="hist-prev" style="background:none;border:none;color:'+(canPrev?'var(--tx-info)':'var(--tx3)')+';font-size:22px;padding:0;cursor:'+(canPrev?'pointer':'default')+'" '+(canPrev?'':'disabled')+'>'+icn('chevron-left')+'</button>'
+    +'<div style="text-align:center">'
+    +'<div style="font-size:15px;font-weight:600">'+dateLbl+'</div>'
+    +(saved?'<div style="font-size:11px;color:var(--tx-ok);margin-top:2px">'+icn('lock')+' Saved</div>':'')
+    +'</div>'
+    +'<button data-a="hist-next" style="background:none;border:none;color:'+(canNext?'var(--tx-info)':'var(--tx3)')+';font-size:22px;padding:0;cursor:'+(canNext?'pointer':'default')+'" '+(canNext?'':'disabled')+'>'+icn('chevron-right')+'</button>'
+    +'</div>';
+
+  // Show entries for the selected date
+  var doses=S.logs.filter(function(l){return l.date===S.histDate;});
+  var vits=S.vitals.filter(function(v){return v.date===S.histDate;});
+  var all=doses.map(function(l){return Object.assign({},l,{_t:'dose'});})
+    .concat(vits.map(function(v){return Object.assign({},v,{_t:'vitals'});}))
+    .sort(function(a,b){return b.time.localeCompare(a.time);});
+
+  if(!all.length){
+    html+='<div class="empty" style="padding:2rem 0"><div class="empty-tx">No entries for this day</div></div>';
+    return html;
+  }
+
+  html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem">'
+    +'<div style="font-size:12px;color:var(--tx3)">'+all.length+' entr'+(all.length===1?'y':'ies')+'</div>'
+    +'<button data-a="log-past" style="padding:5px 14px;background:var(--tx-info);color:#fff;border:none;border-radius:var(--r);font-size:12px;font-weight:500;font-family:var(--sans)">'+icn('plus')+' Add past entry</button>'
+    +'</div>';
+
+  html+='<div style="overflow-x:auto"><table class="data-table"><thead><tr><th>Time</th><th>Compound</th><th>Dose</th><th>Route</th><th>Notes</th><th>Status</th><th></th></tr></thead><tbody>';
+  all.forEach(function(e){
+    if(e._t==='vitals'){
+      html+='<tr><td>'+e.time+'</td><td class="tx">Vitals snapshot</td>'
+        +'<td colspan="3" style="font-size:11px;color:var(--tx3)">'
+        +(e.energyYest!=null?'Energy yesterday: '+e.energyYest+'/10 ':''  )
+        +(e.energyCurrent!=null?'Current: '+e.energyCurrent+'/10 ':'')
+        +(e.glucose!=null?'Glucose: '+e.glucose+' mg/dL':'')
+        +'</td><td></td><td></td></tr>';
+    }else{
+      var m=PMETA[e.proto]||{color:'#888'};
+      var status=e.missed?'<span class="tpill tpill-err">Missed</span>':e.copied?'<span class="tpill tpill-info">Same</span>':e.quick?'<span class="tpill tpill-ok">Quick</span>':'<span class="tpill tpill-ok">Logged</span>';
+      html+='<tr>'
+        +'<td style="font-family:var(--mono)">'+e.time+'</td>'
+        +'<td class="tx"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+m.color+';margin-right:6px;vertical-align:middle"></span>'
+        +esc(e.label?e.nm+' · '+e.label:e.nm)+'</td>'
+        +'<td>'+(e.dose!=null?e.dose+e.unit:'—')+'</td>'
+        +'<td>'+esc(e.route||'')+'</td>'
+        +'<td style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(e.notes||'')+'</td>'
+        +'<td>'+status+'</td>'
+        +'<td style="white-space:nowrap">'
+        +'<button class="btn-edit" data-a="edit-log" data-lid="'+e.id+'" title="Edit">'+icn('pencil')+'</button> '
+        +'<button class="btn-edit" data-a="delete-log" data-lid="'+e.id+'" title="Delete" style="color:var(--tx-err)">'+icn('trash')+'</button>'
+        +'</td></tr>';
+    }
+  });
+  html+='</tbody></table></div>';
   return html;
 }
 
@@ -1200,7 +1259,7 @@ function rHdr(){
   var syncDot=online?'<span style="width:6px;height:6px;border-radius:50%;background:var(--tx-ok);display:inline-block;margin-left:4px" title="Synced"></span>':'<span style="width:6px;height:6px;border-radius:50%;background:var(--tx-warn);display:inline-block;margin-left:4px" title="Offline - will sync when connected"></span>';
   return '<div class="hdr"><div class="hdr-left">'
     +'<span class="hdr-brand">Tony<span style="color:var(--tx-info);font-weight:700">\u00b3</span>'+syncDot+'</span>'
-    +'<span class="hdr-tag">T<span style="color:var(--tx-info);font-weight:700;font-size:17px">\u00b3</span> \u2014 longevity, performance, cognition <span style="font-size:10px;color:var(--tx3);font-family:var(--mono)">v0.30</span></span>'
+    +'<span class="hdr-tag">T<span style="color:var(--tx-info);font-weight:700;font-size:17px">\u00b3</span> \u2014 longevity, performance, cognition <span style="font-size:10px;color:var(--tx3);font-family:var(--mono)">v0.31</span></span>'
     +'</div>'+b+'</div>';
 }
 function rTabs(){
@@ -1457,6 +1516,7 @@ function rHistory(){
         h+='<div style="display:flex;align-items:center;gap:.4rem">';
         h+='<span class="hist-tm">'+e.time+'</span>';
         h+='<button class="btn-edit" data-a="edit-log" data-lid="'+e.id+'">'+icn('pencil')+'</button>';
+        h+='<button class="btn-edit" data-a="delete-log" data-lid="'+e.id+'" style="color:var(--tx-err)">'+icn('trash')+'</button>';
         h+='</div></div>';
         h+='<div class="hist-meta">'+(e.dose!=null?e.dose+e.unit:'—')+' · '+e.route;
         h+=e.missed?'<span class="tag tag-missed">missed</span>':'';
@@ -1639,6 +1699,7 @@ function onClick(e){
   else if(a==='open-log'){S.prevTab=S.tab;S.logging={cid:cid,sid:null,editId:null};render(false);}
   else if(a==='open-split-log'){S.prevTab=S.tab;S.logging={cid:cid,sid:sid,editId:null};render(false);}
   else if(a==='edit-log'){S.prevTab=S.tab;var lg=S.logs.find(function(l){return l.id===lid;});if(lg)S.logging={cid:lg.cid,sid:lg.sid||null,editId:lg.id};render(false);}
+  else if(a==='delete-log'){if(confirm('Delete this log entry?')){S.logs=S.logs.filter(function(l){return l.id!==lid;});deleteLog(lid);save();render(false);}}
   else if(a==='back'){S.logging=null;if(S.prevTab)S.tab=S.prevTab;render(false);}
   else if(a==='same-one'){doSameOne(cid,null);}
   else if(a==='same-split'){doSameOne(cid,sid);}
