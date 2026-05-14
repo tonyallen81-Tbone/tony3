@@ -294,7 +294,7 @@ var SEED=[
 ];
 
 // ── State ───────────────────────────────────────────────────────────────────
-var S={cpds:[],logs:[],vitals:[],labResults:[],journal:[],tab:'today',deskTab:'dashboard',labCat:'Hormonal',labDetail:null,logging:null,editCpd:null,addingLab:false,logPast:false,addingJournal:false,editJournalId:null,prevTab:null,freshStart:false,vitalsOpen:false,loaded:false,savedDays:[],histDate:null};
+var S={cpds:[],logs:[],vitals:[],labResults:[],journal:[],whoopRecovery:[],whoopSleep:[],whoopCycles:[],whoopWorkouts:[],whoopConnected:false,tab:'today',deskTab:'dashboard',labCat:'Hormonal',labDetail:null,logging:null,editCpd:null,addingLab:false,logPast:false,addingJournal:false,editJournalId:null,prevTab:null,freshStart:false,vitalsOpen:false,loaded:false,savedDays:[],histDate:null};
 var _ey=null,_ec=null;
 
 // ── Date helpers ────────────────────────────────────────────────────────────
@@ -310,6 +310,7 @@ function nowTime(){return pad(new Date().getHours())+':'+pad(new Date().getMinut
 var DEFAULT_TIME='09:00';
 
 // ── Supabase config ─────────────────────────────────────────────────────────
+var SUPABASE_URL = 'https://rlvvkepcqfzbvgwefjwc.supabase.co';
 var SB_URL = 'https://rlvvkepcqfzbvgwefjwc.supabase.co';
 var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJsdnZrZXBjcWZ6YnZnd2VmandjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1Mjk5MTcsImV4cCI6MjA5NDEwNTkxN30.GysmV5mwbpqta9jVA9butslrfVuSfRNZewledRaMR40';
 
@@ -373,14 +374,22 @@ function load(){
   var p4=sbGet('compound_overrides','select=*').catch(function(){return [];});
   var p5=sbGet('lab_results','select=*&order=draw_date.asc').catch(function(){return [];});
   var p6=sbGet('journal_entries','select=*&order=entry_date.desc').catch(function(){return [];});
+  var p7=sbGet('whoop_tokens','select=id,updated_at').catch(function(){return [];});
+  var p8=sbGet('whoop_recovery','select=*&order=created_at.desc&limit=90').catch(function(){return [];});
+  var p9=sbGet('whoop_sleep','select=*&order=start_time.desc&limit=90').catch(function(){return [];});
+  var p10=sbGet('whoop_cycles','select=*&order=start_time.desc&limit=90').catch(function(){return [];});
 
-  Promise.all([p1,p2,p3,p4,p5,p6]).then(function(results){
+  Promise.all([p1,p2,p3,p4,p5,p6,p7,p8,p9,p10]).then(function(results){
     var logs=Array.isArray(results[0])?results[0]:[];
     var vitals=Array.isArray(results[1])?results[1]:[];
     var savedDays=Array.isArray(results[2])?results[2]:[];
     var overrides=Array.isArray(results[3])?results[3]:[];
     var labRows=Array.isArray(results[4])?results[4]:[];
     var journalRows=Array.isArray(results[5])?results[5]:[];
+    var whoopTokenRows=Array.isArray(results[6])?results[6]:[];
+    var whoopRecoveryRows=Array.isArray(results[7])?results[7]:[];
+    var whoopSleepRows=Array.isArray(results[8])?results[8]:[];
+    var whoopCycleRows=Array.isArray(results[9])?results[9]:[];
 
     // Map Supabase rows to app format
     S.logs=logs.map(function(r){return {
@@ -411,7 +420,11 @@ function load(){
         seedLabResults();
       }
     } else {
-      S.journal=journalRows.map(function(r){return {
+      S.whoopConnected=whoopTokenRows.length>0;
+    S.whoopRecovery=whoopRecoveryRows;
+    S.whoopSleep=whoopSleepRows;
+    S.whoopCycles=whoopCycleRows;
+    S.journal=journalRows.map(function(r){return {
       id:r.id,entry_date:r.entry_date,week_label:r.week_label||'',
       body:r.body||'',mood:r.mood||null,energy:r.energy||null,
       created_at:r.created_at
@@ -445,7 +458,15 @@ function load(){
   }).catch(function(e){
     console.error('Supabase load error:',e);
     if(!cached){S.cpds=SEED.map(function(c){return Object.assign({},c);});}
-    S.loaded=true; render();
+    S.loaded=true;
+    // Check if returning from WHOOP OAuth
+    if(window.location.search.indexOf('whoop=connected')>-1){
+      S.whoopConnected=true;
+      history.replaceState(null,'',window.location.pathname);
+      S.tab='whoop';
+      if(window.innerWidth>=768)S.deskTab='whoop';
+    }
+    render();
   });
 }
 
@@ -1105,6 +1126,143 @@ function rJournal(){
   return h+'</div>';
 }
 
+
+function doWhoopSync(){
+  var btn=document.getElementById('whoop-sync-btn');
+  if(btn){btn.textContent='Syncing...';btn.disabled=true;}
+  fetch('https://rlvvkepcqfzbvgwefjwc.supabase.co/functions/v1/whoop-sync',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJsdnZrZXBjcWZ6YnZnd2VmandjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1Mjk5MTcsImV4cCI6MjA5NDEwNTkxN30.GysmV5mwbpqta9jVA9butslrfVuSfRNZewledRaMR40'}
+  }).then(function(r){return r.json();}).then(function(data){
+    if(data.status==='success'){
+      S.whoopConnected=true;
+      // Reload WHOOP data
+      var p1=sbGet('whoop_recovery','select=*&order=created_at.desc&limit=90').catch(function(){return[];});
+      var p2=sbGet('whoop_sleep','select=*&order=start_time.desc&limit=90').catch(function(){return[];});
+      var p3=sbGet('whoop_cycles','select=*&order=start_time.desc&limit=90').catch(function(){return[];});
+      Promise.all([p1,p2,p3]).then(function(res){
+        S.whoopRecovery=Array.isArray(res[0])?res[0]:[];
+        S.whoopSleep=Array.isArray(res[1])?res[1]:[];
+        S.whoopCycles=Array.isArray(res[2])?res[2]:[];
+        render(false);
+      });
+    }else{
+      alert('Sync error: '+(data.error||'unknown'));
+      render(false);
+    }
+  }).catch(function(e){alert('Sync failed: '+e.message);render(false);});
+}
+
+function fmtMins(ms){
+  if(!ms)return '--';
+  var m=Math.round(ms/60000);
+  var h=Math.floor(m/60);
+  var min=m%60;
+  return h>0?h+'h '+(min>0?min+'m':''):min+'m';
+}
+
+function rWhoop(){
+  var h='<div class="body">';
+
+  // Header
+  h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.875rem">';
+  h+='<div><div style="font-size:16px;font-weight:600">WHOOP</div>';
+  h+='<div style="font-size:11px;color:var(--tx3)">'+(S.whoopConnected?'Connected — '+S.whoopRecovery.length+' days synced':'Not connected')+'</div></div>';
+  if(S.whoopConnected){
+    h+='<button id="whoop-sync-btn" data-a="whoop-sync" style="padding:6px 14px;background:var(--bg2);border:.5px solid var(--bd2);color:var(--tx);border-radius:var(--r);font-size:12px;font-weight:500;font-family:var(--sans)">'+icn('refresh')+' Sync now</button>';
+  }else{
+    h+='<a href="https://rlvvkepcqfzbvgwefjwc.supabase.co/functions/v1/whoop-auth" style="padding:6px 14px;background:#000;color:#fff;border:none;border-radius:var(--r);font-size:13px;font-weight:500;font-family:var(--sans);text-decoration:none">Connect WHOOP</a>';
+  }
+  h+='</div>';
+
+  if(!S.whoopConnected){
+    h+='<div style="background:var(--bg2);border:.5px solid var(--bd);border-radius:var(--rl);padding:1.25rem;text-align:center">';
+    h+='<div style="font-size:32px;margin-bottom:.75rem">'+icn('activity')+'</div>';
+    h+='<div style="font-size:14px;font-weight:600;margin-bottom:.5rem">Connect your WHOOP</div>';
+    h+='<div style="font-size:13px;color:var(--tx2);line-height:1.6;margin-bottom:1rem">Sync your HRV, recovery score, sleep data, strain, and workouts directly into Tony³.</div>';
+    h+='<a href="https://rlvvkepcqfzbvgwefjwc.supabase.co/functions/v1/whoop-auth" style="display:inline-block;padding:.75rem 1.5rem;background:#000;color:#fff;border-radius:var(--r);font-size:14px;font-weight:600;font-family:var(--sans);text-decoration:none">Connect WHOOP →</a>';
+    h+='</div>';
+    return h+'</div>';
+  }
+
+  // Latest recovery card
+  var latest=S.whoopRecovery[0];
+  if(latest){
+    var rec=latest.score_recovery_score;
+    var hrv=latest.score_hrv_rmssd_milli?Math.round(latest.score_hrv_rmssd_milli):null;
+    var rhr=latest.score_resting_heart_rate?Math.round(latest.score_resting_heart_rate):null;
+    var recColor=rec>=67?'var(--tx-ok)':rec>=34?'var(--tx-warn)':'var(--tx-err)';
+    h+='<div style="background:var(--bg2);border:.5px solid var(--bd);border-radius:var(--rl);padding:1rem;margin-bottom:.75rem">';
+    h+='<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--tx3);margin-bottom:.75rem">Latest recovery — '+latest.created_at.slice(0,10)+'</div>';
+    h+='<div style="display:flex;gap:1rem;flex-wrap:wrap">';
+    h+='<div style="flex:1;min-width:80px;text-align:center"><div style="font-size:36px;font-weight:700;font-family:var(--mono);color:'+recColor+'">'+(rec!=null?Math.round(rec):'--')+'</div><div style="font-size:11px;color:var(--tx3)">Recovery %</div></div>';
+    h+='<div style="flex:1;min-width:80px;text-align:center"><div style="font-size:36px;font-weight:700;font-family:var(--mono);color:var(--tx-info)">'+(hrv||'--')+'</div><div style="font-size:11px;color:var(--tx3)">HRV (ms)</div></div>';
+    h+='<div style="flex:1;min-width:80px;text-align:center"><div style="font-size:36px;font-weight:700;font-family:var(--mono)">'+(rhr||'--')+'</div><div style="font-size:11px;color:var(--tx3)">Resting HR</div></div>';
+    h+='</div></div>';
+  }
+
+  // Latest sleep card
+  var latestSleep=S.whoopSleep.filter(function(s){return !s.nap;})[0];
+  if(latestSleep){
+    var perf=latestSleep.score_sleep_performance_percentage;
+    var sws=latestSleep.score_total_slow_wave_sleep_time_milli;
+    var rem=latestSleep.score_total_rem_sleep_time_milli;
+    var total=latestSleep.score_total_in_bed_time_milli;
+    var eff=latestSleep.score_sleep_efficiency_percentage;
+    var perfColor=perf>=85?'var(--tx-ok)':perf>=70?'var(--tx-warn)':'var(--tx-err)';
+    h+='<div style="background:var(--bg2);border:.5px solid var(--bd);border-radius:var(--rl);padding:1rem;margin-bottom:.75rem">';
+    h+='<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--tx3);margin-bottom:.75rem">Latest sleep — '+latestSleep.start_time.slice(0,10)+'</div>';
+    h+='<div style="display:flex;gap:1rem;flex-wrap:wrap">';
+    h+='<div style="flex:1;min-width:80px;text-align:center"><div style="font-size:28px;font-weight:700;font-family:var(--mono);color:'+perfColor+'">'+(perf!=null?Math.round(perf)+'%':'--')+'</div><div style="font-size:11px;color:var(--tx3)">Performance</div></div>';
+    h+='<div style="flex:1;min-width:80px;text-align:center"><div style="font-size:28px;font-weight:700;font-family:var(--mono);color:var(--tx-info)">'+fmtMins(sws)+'</div><div style="font-size:11px;color:var(--tx3)">Deep (SWS)</div></div>';
+    h+='<div style="flex:1;min-width:80px;text-align:center"><div style="font-size:28px;font-weight:700;font-family:var(--mono)">'+fmtMins(rem)+'</div><div style="font-size:11px;color:var(--tx3)">REM</div></div>';
+    h+='<div style="flex:1;min-width:80px;text-align:center"><div style="font-size:28px;font-weight:700;font-family:var(--mono)">'+fmtMins(total)+'</div><div style="font-size:11px;color:var(--tx3)">In bed</div></div>';
+    h+='</div></div>';
+  }
+
+  // 7-day HRV trend
+  if(S.whoopRecovery.length>1){
+    var last7=S.whoopRecovery.slice(0,7).reverse();
+    var maxHrv=Math.max.apply(null,last7.map(function(r){return r.score_hrv_rmssd_milli||0;}));
+    h+='<div style="background:var(--bg2);border:.5px solid var(--bd);border-radius:var(--rl);padding:1rem;margin-bottom:.75rem">';
+    h+='<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--tx3);margin-bottom:.75rem">7-day HRV trend</div>';
+    h+='<div style="display:flex;align-items:flex-end;gap:.375rem;height:80px">';
+    last7.forEach(function(r){
+      var hrv=r.score_hrv_rmssd_milli||0;
+      var rec=r.score_recovery_score||0;
+      var pct=maxHrv>0?Math.max(4,(hrv/maxHrv)*100):4;
+      var col=rec>=67?'var(--tx-ok)':rec>=34?'var(--tx-warn)':'var(--tx-err)';
+      var day=new Date(r.created_at).toLocaleDateString('en-US',{weekday:'short'});
+      h+='<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px">';
+      h+='<div style="font-size:10px;font-weight:600;color:'+col+';font-family:var(--mono)">'+Math.round(hrv)+'</div>';
+      h+='<div style="width:100%;background:'+col+';border-radius:3px 3px 0 0;height:'+pct+'%"></div>';
+      h+='<div style="font-size:9px;color:var(--tx3)">'+day+'</div>';
+      h+='</div>';
+    });
+    h+='</div></div>';
+  }
+
+  // 7-day recovery history table
+  if(S.whoopRecovery.length){
+    h+='<div style="font-size:13px;font-weight:600;margin-bottom:.5rem">Recent recovery history</div>';
+    h+='<div style="overflow-x:auto"><table class="data-table"><thead><tr><th>Date</th><th>Recovery</th><th>HRV</th><th>Resting HR</th><th>SpO2</th></tr></thead><tbody>';
+    S.whoopRecovery.slice(0,14).forEach(function(r){
+      var rec=r.score_recovery_score!=null?Math.round(r.score_recovery_score):null;
+      var recColor=rec!=null?(rec>=67?'var(--tx-ok)':rec>=34?'var(--tx-warn)':'var(--tx-err)'):'var(--tx3)';
+      h+='<tr>'
+        +'<td style="font-family:var(--mono)">'+r.created_at.slice(0,10)+'</td>'
+        +'<td><span style="font-weight:700;color:'+recColor+';font-family:var(--mono)">'+(rec!=null?rec+'%':'--')+'</span></td>'
+        +'<td style="font-family:var(--mono)">'+(r.score_hrv_rmssd_milli?Math.round(r.score_hrv_rmssd_milli)+' ms':'--')+'</td>'
+        +'<td style="font-family:var(--mono)">'+(r.score_resting_heart_rate?Math.round(r.score_resting_heart_rate)+' bpm':'--')+'</td>'
+        +'<td style="font-family:var(--mono)">'+(r.score_spo2_percentage?Math.round(r.score_spo2_percentage)+'%':'--')+'</td>'
+        +'</tr>';
+    });
+    h+='</tbody></table></div>';
+  }
+
+  return h+'</div>';
+}
+
 function rDesktopLayout(){
   return '<div class="desktop-layout">'
     +'<div class="desktop-left">'+rContent()+'</div>'
@@ -1118,6 +1276,7 @@ function rDesktopRight(){
     {id:'history',lb:'Full Log'},
     {id:'streaks',lb:'Streaks'},
     {id:'labs',lb:'Labs'},
+    {id:'whoop',lb:'WHOOP'},
     {id:'journal',lb:'Journal'},
     {id:'export',lb:'Export'}
   ];
@@ -1131,6 +1290,7 @@ function rDesktopRight(){
   else if(S.deskTab==='history') content=rDeskHistory();
   else if(S.deskTab==='streaks') content=rDeskStreaks();
   else if(S.deskTab==='labs') content=rLabs();
+  else if(S.deskTab==='whoop') content=rWhoop();
   else if(S.deskTab==='journal') content=rJournal();
   else if(S.deskTab==='export') content=rDeskExport();
 
@@ -1374,14 +1534,14 @@ function rHdr(){
   var syncDot=online?'<span style="width:6px;height:6px;border-radius:50%;background:var(--tx-ok);display:inline-block;margin-left:4px" title="Synced"></span>':'<span style="width:6px;height:6px;border-radius:50%;background:var(--tx-warn);display:inline-block;margin-left:4px" title="Offline - will sync when connected"></span>';
   return '<div class="hdr"><div class="hdr-left">'
     +'<span class="hdr-brand">Tony<span style="color:var(--tx-info);font-weight:700">\u00b3</span>'+syncDot+'</span>'
-    +'<span class="hdr-tag">T<span style="color:var(--tx-info);font-weight:700;font-size:17px">\u00b3</span> \u2014 longevity, performance, cognition <span style="font-size:10px;color:var(--tx3);font-family:var(--mono)">v0.32</span></span>'
+    +'<span class="hdr-tag">T<span style="color:var(--tx-info);font-weight:700;font-size:17px">\u00b3</span> \u2014 longevity, performance, cognition <span style="font-size:10px;color:var(--tx3);font-family:var(--mono)">v0.33</span></span>'
     +'</div>'+b+'</div>';
 }
 function rTabs(){
-  var ts=[{id:'today',ic:'calendar-check',lb:'Today'},{id:'history',ic:'history',lb:'Log'},{id:'compounds',ic:'pill',lb:'Compounds'},{id:'labs',ic:'test-pipe',lb:'Labs'},{id:'journal',ic:'notebook',lb:'Journal'},{id:'protocols',ic:'stack-2',lb:'Protocols'}];
+  var ts=[{id:'today',ic:'calendar-check',lb:'Today'},{id:'history',ic:'history',lb:'Log'},{id:'compounds',ic:'pill',lb:'Compounds'},{id:'labs',ic:'test-pipe',lb:'Labs'},{id:'whoop',ic:'activity',lb:'WHOOP'},{id:'journal',ic:'notebook',lb:'Journal'},{id:'protocols',ic:'stack-2',lb:'Protocols'}];
   return '<div class="tabs">'+ts.map(function(t){return '<button class="tab'+(S.tab===t.id?' on':'')+'" data-a="tab" data-v="'+t.id+'">'+icn(t.ic)+'<span>'+t.lb+'</span></button>';}).join('')+'</div>';
 }
-function rContent(){if(S.tab==='today')return rToday();if(S.tab==='history')return rHistory();if(S.tab==='compounds')return rCompounds();if(S.tab==='labs')return rLabs();if(S.tab==='journal')return rJournal();return rProtocols();}
+function rContent(){if(S.tab==='today')return rToday();if(S.tab==='history')return rHistory();if(S.tab==='compounds')return rCompounds();if(S.tab==='labs')return rLabs();if(S.tab==='whoop')return rWhoop();if(S.tab==='journal')return rJournal();return rProtocols();}
 
 function rToday(){
   var act=S.cpds.filter(function(c){return c.status==='ACTIVE';});
@@ -1813,6 +1973,7 @@ function onClick(e){
   else if(a==='save-journal'){doSaveJournal();}
   else if(a==='edit-journal'){S.editJournalId=el.dataset.jid;S.addingJournal=false;S.prevTab=S.tab;render(false);}
   else if(a==='delete-journal'){if(confirm('Delete this journal entry?')){S.journal=S.journal.filter(function(j){return j.id!==el.dataset.jid;});deleteJournal(el.dataset.jid);save();render(false);}}
+  else if(a==='whoop-sync'){doWhoopSync();}
   else if(a==='hist-prev'){navHist(-1);}
   else if(a==='hist-next'){navHist(1);}
   else if(a==='open-log'){S.prevTab=S.tab;S.logging={cid:cid,sid:null,editId:null};render(false);}
