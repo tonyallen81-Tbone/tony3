@@ -1220,26 +1220,121 @@ function rWhoop(){
     h+='</div></div>';
   }
 
-  // 7-day HRV trend
+  // 14-day HRV + Strain trend
   if(S.whoopRecovery.length>1){
-    var last7=S.whoopRecovery.slice(0,7).reverse();
-    var maxHrv=Math.max.apply(null,last7.map(function(r){return r.score_hrv_rmssd_milli||0;}));
-    h+='<div style="background:var(--bg2);border:.5px solid var(--bd);border-radius:var(--rl);padding:1rem;margin-bottom:.75rem">';
-    h+='<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--tx3);margin-bottom:.75rem">7-day HRV trend</div>';
-    h+='<div style="display:flex;align-items:flex-end;gap:.375rem;height:80px">';
-    last7.forEach(function(r){
-      var hrv=r.score_hrv_rmssd_milli||0;
-      var rec=r.score_recovery_score||0;
-      var pct=maxHrv>0?Math.max(4,(hrv/maxHrv)*100):4;
-      var col=rec>=67?'var(--tx-ok)':rec>=34?'var(--tx-warn)':'var(--tx-err)';
-      var day=new Date(r.created_at).toLocaleDateString('en-US',{weekday:'short'});
-      h+='<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px">';
-      h+='<div style="font-size:10px;font-weight:600;color:'+col+';font-family:var(--mono)">'+Math.round(hrv)+'</div>';
-      h+='<div style="width:100%;background:'+col+';border-radius:3px 3px 0 0;height:'+pct+'%"></div>';
-      h+='<div style="font-size:9px;color:var(--tx3)">'+day+'</div>';
-      h+='</div>';
+    var last14rec=S.whoopRecovery.slice(0,14).reverse();
+    // Match cycles to recovery dates for strain
+    var cycleMap={};
+    S.whoopCycles.forEach(function(c){
+      var d=c.start_time?c.start_time.slice(0,10):'';
+      if(d)cycleMap[d]=c;
     });
+
+    var hrvVals=last14rec.map(function(r){return r.score_hrv_rmssd_milli||0;});
+    var maxHrv=Math.max.apply(null,hrvVals)||1;
+    var minHrv=Math.min.apply(null,hrvVals.filter(function(v){return v>0;}))||0;
+    var hrvRange=maxHrv-minHrv||1;
+
+    // For strain: previous day's cycle strain
+    var strainVals=last14rec.map(function(r,i){
+      var prevDate=last14rec[i-1]?last14rec[i-1].created_at.slice(0,10):'';
+      var cyc=cycleMap[prevDate];
+      return cyc&&cyc.score_strain?cyc.score_strain:null;
+    });
+    var strainMax=Math.max.apply(null,strainVals.filter(function(v){return v!=null;}))||21;
+
+    var chartH=120;
+    h+='<div style="background:var(--bg2);border:.5px solid var(--bd);border-radius:var(--rl);padding:1rem;margin-bottom:.75rem">';
+    h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem">';
+    h+='<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--tx3)">14-day HRV & Strain</div>';
+    h+='<div style="display:flex;gap:.875rem;font-size:10px;color:var(--tx3)">';
+    h+='<span><span style="display:inline-block;width:10px;height:3px;background:var(--tx-info);border-radius:2px;vertical-align:middle;margin-right:3px"></span>HRV</span>';
+    h+='<span><span style="display:inline-block;width:10px;height:3px;background:var(--tx-err);border-radius:2px;vertical-align:middle;margin-right:3px"></span>Strain (prev day)</span>';
     h+='</div></div>';
+
+    // SVG chart
+    var svgW=600, svgH=chartH+40;
+    var padL=30, padR=10, padT=10, padB=30;
+    var chartW=svgW-padL-padR;
+    var n=last14rec.length;
+    var xStep=n>1?chartW/(n-1):chartW;
+
+    // Build point coords
+    var hrvPts=[], strainPts=[];
+    last14rec.forEach(function(r,i){
+      var x=padL+(i*xStep);
+      var hrv=r.score_hrv_rmssd_milli||0;
+      var yHrv=hrv>0?padT+chartH-((hrv-minHrv)/hrvRange*chartH):null;
+      if(yHrv!=null)hrvPts.push({x:x,y:yHrv,hrv:Math.round(hrv)});
+      else hrvPts.push(null);
+
+      var prevDate=last14rec[i-1]?last14rec[i-1].created_at.slice(0,10):'';
+      var cyc=cycleMap[prevDate];
+      var strain=cyc&&cyc.score_strain?cyc.score_strain:null;
+      if(strain!=null){
+        var yStrain=padT+chartH-(strain/strainMax*chartH);
+        strainPts.push({x:x,y:yStrain,strain:strain.toFixed(1)});
+      }else{
+        strainPts.push(null);
+      }
+    });
+
+    // Build SVG path
+    function makePath(pts,col){
+      var d='';
+      pts.forEach(function(p,i){
+        if(!p)return;
+        if(d===''||!pts[i-1])d+='M'+p.x.toFixed(1)+','+p.y.toFixed(1);
+        else d+='L'+p.x.toFixed(1)+','+p.y.toFixed(1);
+      });
+      return d?'<path d="'+d+'" stroke="'+col+'" stroke-width="2" fill="none" stroke-linejoin="round" stroke-linecap="round"/>':'';
+    }
+
+    var svg='<svg viewBox="0 0 '+svgW+' '+svgH+'" style="width:100%;height:'+(chartH+40)+'px">';
+    // Grid lines
+    svg+='<line x1="'+padL+'" y1="'+padT+'" x2="'+(svgW-padR)+'" y2="'+padT+'" stroke="var(--bd)" stroke-width="0.5"/>';
+    svg+='<line x1="'+padL+'" y1="'+(padT+chartH/2)+'" x2="'+(svgW-padR)+'" y2="'+(padT+chartH/2)+'" stroke="var(--bd)" stroke-width="0.5" stroke-dasharray="3,3"/>';
+    svg+='<line x1="'+padL+'" y1="'+(padT+chartH)+'" x2="'+(svgW-padR)+'" y2="'+(padT+chartH)+'" stroke="var(--bd)" stroke-width="0.5"/>';
+    // Y labels HRV
+    svg+='<text x="'+(padL-4)+'" y="'+(padT+4)+'" text-anchor="end" fill="var(--tx3)" font-size="9">'+Math.round(maxHrv)+'</text>';
+    svg+='<text x="'+(padL-4)+'" y="'+(padT+chartH+4)+'" text-anchor="end" fill="var(--tx3)" font-size="9">'+Math.round(minHrv)+'</text>';
+    // Lines
+    svg+=makePath(hrvPts,'#3b82f6');
+    svg+=makePath(strainPts.filter(function(p){return p;})[0]?strainPts:'','#ef4444');
+    // HRV dots + values
+    hrvPts.forEach(function(p,i){
+      if(!p)return;
+      var rec=last14rec[i].score_recovery_score||0;
+      var col=rec>=67?'#22c55e':rec>=34?'#f59e0b':'#ef4444';
+      svg+='<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="3" fill="'+col+'" stroke="white" stroke-width="1"/>';
+    });
+    // Strain dots
+    strainPts.forEach(function(p){
+      if(!p)return;
+      svg+='<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="3" fill="#ef4444" stroke="white" stroke-width="1"/>';
+    });
+    // X axis labels (day names)
+    last14rec.forEach(function(r,i){
+      var x=padL+(i*xStep);
+      var day=new Date(r.created_at+'').toLocaleDateString('en-US',{weekday:'short'});
+      var dateShort=r.created_at.slice(5,10);
+      svg+='<text x="'+x.toFixed(1)+'" y="'+(padT+chartH+18)+'" text-anchor="middle" fill="var(--tx3)" font-size="8">'+day+'</text>';
+      svg+='<text x="'+x.toFixed(1)+'" y="'+(padT+chartH+28)+'" text-anchor="middle" fill="var(--tx3)" font-size="7">'+dateShort+'</text>';
+    });
+    svg+='</svg>';
+
+    h+=svg;
+
+    // Value summary row below chart
+    h+='<div style="display:flex;justify-content:space-between;margin-top:.5rem;font-size:10px;color:var(--tx3)">';
+    h+='<span>HRV range: <b style="color:var(--tx)">'+Math.round(minHrv)+' – '+Math.round(maxHrv)+' ms</b></span>';
+    var strainFiltered=strainVals.filter(function(v){return v!=null;});
+    if(strainFiltered.length){
+      var avgStrain=(strainFiltered.reduce(function(a,b){return a+b;},0)/strainFiltered.length).toFixed(1);
+      h+='<span>Avg strain: <b style="color:var(--tx)">'+avgStrain+'</b></span>';
+    }
+    h+='</div>';
+    h+='</div>';
   }
 
   // 7-day recovery history table
@@ -1534,7 +1629,7 @@ function rHdr(){
   var syncDot=online?'<span style="width:6px;height:6px;border-radius:50%;background:var(--tx-ok);display:inline-block;margin-left:4px" title="Synced"></span>':'<span style="width:6px;height:6px;border-radius:50%;background:var(--tx-warn);display:inline-block;margin-left:4px" title="Offline - will sync when connected"></span>';
   return '<div class="hdr"><div class="hdr-left">'
     +'<span class="hdr-brand">Tony<span style="color:var(--tx-info);font-weight:700">\u00b3</span>'+syncDot+'</span>'
-    +'<span class="hdr-tag">T<span style="color:var(--tx-info);font-weight:700;font-size:17px">\u00b3</span> \u2014 longevity, performance, cognition <span style="font-size:10px;color:var(--tx3);font-family:var(--mono)">v0.33</span></span>'
+    +'<span class="hdr-tag">T<span style="color:var(--tx-info);font-weight:700;font-size:17px">\u00b3</span> \u2014 longevity, performance, cognition <span style="font-size:10px;color:var(--tx3);font-family:var(--mono)">v0.34</span></span>'
     +'</div>'+b+'</div>';
 }
 function rTabs(){
