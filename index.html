@@ -1200,7 +1200,9 @@ function rWithings(){
 
   var latest=S.withingsBody[0]||null;
   var prev=S.withingsBody[1]||null;
-  var latestV=S.withingsVascular[0]||null;
+  // Sort vascular by date desc
+  var sortedV=S.withingsVascular.slice().sort(function(a,b){return b.date.localeCompare(a.date);});
+  var latestV=sortedV[0]||null;
   var latestBP=S.withingsBP[0]||null;
 
   // Latest body composition card
@@ -1829,7 +1831,7 @@ function rHdr(){
   var syncDot=online?'<span style="width:6px;height:6px;border-radius:50%;background:var(--tx-ok);display:inline-block;margin-left:4px" title="Synced"></span>':'<span style="width:6px;height:6px;border-radius:50%;background:var(--tx-warn);display:inline-block;margin-left:4px" title="Offline - will sync when connected"></span>';
   return '<div class="hdr"><div class="hdr-left">'
     +'<span class="hdr-brand">Tony<span style="color:var(--tx-info);font-weight:700">\u00b3</span>'+syncDot+'</span>'
-    +'<span class="hdr-tag">T<span style="color:var(--tx-info);font-weight:700;font-size:17px">\u00b3</span> \u2014 longevity, performance, cognition <span style="font-size:10px;color:var(--tx3);font-family:var(--mono)">v0.35</span></span>'
+    +'<span class="hdr-tag">T<span style="color:var(--tx-info);font-weight:700;font-size:17px">\u00b3</span> \u2014 longevity, performance, cognition <span style="font-size:10px;color:var(--tx3);font-family:var(--mono)">v0.36</span></span>'
     +'</div>'+b+'</div>';
 }
 function rTabs(){
