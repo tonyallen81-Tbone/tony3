@@ -294,7 +294,7 @@ var SEED=[
 ];
 
 // ── State ───────────────────────────────────────────────────────────────────
-var S={cpds:[],logs:[],vitals:[],labResults:[],journal:[],whoopRecovery:[],whoopSleep:[],whoopCycles:[],whoopWorkouts:[],whoopConnected:false,tab:'today',deskTab:'dashboard',labCat:'Hormonal',labDetail:null,logging:null,editCpd:null,addingLab:false,logPast:false,addingJournal:false,editJournalId:null,prevTab:null,freshStart:false,vitalsOpen:false,loaded:false,savedDays:[],histDate:null};
+var S={cpds:[],logs:[],vitals:[],labResults:[],journal:[],whoopRecovery:[],whoopSleep:[],whoopCycles:[],whoopWorkouts:[],whoopConnected:false,withingsBody:[],withingsBP:[],withingsVascular:[],withingsConnected:false,tab:'today',deskTab:'dashboard',labCat:'Hormonal',labDetail:null,logging:null,editCpd:null,addingLab:false,logPast:false,addingJournal:false,editJournalId:null,prevTab:null,freshStart:false,vitalsOpen:false,loaded:false,savedDays:[],histDate:null};
 var _ey=null,_ec=null;
 
 // ── Date helpers ────────────────────────────────────────────────────────────
@@ -378,8 +378,12 @@ function load(){
   var p8=sbGet('whoop_recovery','select=*&order=created_at.desc&limit=90').catch(function(){return [];});
   var p9=sbGet('whoop_sleep','select=*&order=start_time.desc&limit=90').catch(function(){return [];});
   var p10=sbGet('whoop_cycles','select=*&order=start_time.desc&limit=90').catch(function(){return [];});
+  var p11=sbGet('withings_tokens','select=id,updated_at').catch(function(){return [];});
+  var p12=sbGet('withings_body','select=*&order=date.desc&limit=90').catch(function(){return [];});
+  var p13=sbGet('withings_bp','select=*&order=date.desc&limit=90').catch(function(){return [];});
+  var p14=sbGet('withings_vascular','select=*&order=date.desc&limit=90').catch(function(){return [];});
 
-  Promise.all([p1,p2,p3,p4,p5,p6,p7,p8,p9,p10]).then(function(results){
+  Promise.all([p1,p2,p3,p4,p5,p6,p7,p8,p9,p10,p11,p12,p13,p14]).then(function(results){
     var logs=Array.isArray(results[0])?results[0]:[];
     var vitals=Array.isArray(results[1])?results[1]:[];
     var savedDays=Array.isArray(results[2])?results[2]:[];
@@ -387,6 +391,10 @@ function load(){
     var labRows=Array.isArray(results[4])?results[4]:[];
     var journalRows=Array.isArray(results[5])?results[5]:[];
     var whoopTokenRows=Array.isArray(results[6])?results[6]:[];
+    var withingsTokenRows=Array.isArray(results[10])?results[10]:[];
+    var withingsBodyRows=Array.isArray(results[11])?results[11]:[];
+    var withingsBPRows=Array.isArray(results[12])?results[12]:[];
+    var withingsVascularRows=Array.isArray(results[13])?results[13]:[];
     var whoopRecoveryRows=Array.isArray(results[7])?results[7]:[];
     var whoopSleepRows=Array.isArray(results[8])?results[8]:[];
     var whoopCycleRows=Array.isArray(results[9])?results[9]:[];
@@ -421,6 +429,10 @@ function load(){
       }
     } else {
       S.whoopConnected=whoopTokenRows.length>0;
+    S.withingsConnected=withingsTokenRows.length>0;
+    S.withingsBody=withingsBodyRows;
+    S.withingsBP=withingsBPRows;
+    S.withingsVascular=withingsVascularRows;
     S.whoopRecovery=whoopRecoveryRows;
     S.whoopSleep=whoopSleepRows;
     S.whoopCycles=whoopCycleRows;
@@ -460,6 +472,12 @@ function load(){
     if(!cached){S.cpds=SEED.map(function(c){return Object.assign({},c);});}
     S.loaded=true;
     // Check if returning from WHOOP OAuth
+    if(window.location.search.indexOf('withings=connected')>-1){
+      S.withingsConnected=true;
+      history.replaceState(null,'',window.location.pathname);
+      S.tab='withings';
+      if(window.innerWidth>=768)S.deskTab='withings';
+    }
     if(window.location.search.indexOf('whoop=connected')>-1){
       S.whoopConnected=true;
       history.replaceState(null,'',window.location.pathname);
@@ -1127,6 +1145,187 @@ function rJournal(){
 }
 
 
+
+function doWithingsSync(){
+  var btn=document.getElementById('withings-sync-btn');
+  if(btn){btn.textContent='Syncing...';btn.disabled=true;}
+  fetch('https://rlvvkepcqfzbvgwefjwc.supabase.co/functions/v1/withings-sync',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJsdnZrZXBjcWZ6YnZnd2VmandjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1Mjk5MTcsImV4cCI6MjA5NDEwNTkxN30.GysmV5mwbpqta9jVA9butslrfVuSfRNZewledRaMR40'}
+  }).then(function(r){return r.json();}).then(function(data){
+    if(data.status==='success'){
+      S.withingsConnected=true;
+      var p1=sbGet('withings_body','select=*&order=date.desc&limit=90').catch(function(){return[];});
+      var p2=sbGet('withings_bp','select=*&order=date.desc&limit=90').catch(function(){return[];});
+      var p3=sbGet('withings_vascular','select=*&order=date.desc&limit=90').catch(function(){return[];});
+      Promise.all([p1,p2,p3]).then(function(res){
+        S.withingsBody=Array.isArray(res[0])?res[0]:[];
+        S.withingsBP=Array.isArray(res[1])?res[1]:[];
+        S.withingsVascular=Array.isArray(res[2])?res[2]:[];
+        render(false);
+      });
+    }else{
+      alert('Sync error: '+(data.error||JSON.stringify(data)));
+      render(false);
+    }
+  }).catch(function(e){alert('Sync failed: '+e.message);render(false);});
+}
+
+function kgToLbs(kg){return kg?(kg*2.20462).toFixed(1):null;}
+function kgToLbsRaw(kg){return kg?kg*2.20462:null;}
+
+function rWithings(){
+  var h='<div class="body">';
+
+  // Header
+  h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.875rem">';
+  h+='<div><div style="font-size:16px;font-weight:600">Withings Body Scan</div>';
+  h+='<div style="font-size:11px;color:var(--tx3)">'+(S.withingsConnected?'Connected — '+S.withingsBody.length+' scans synced':'Not connected')+'</div></div>';
+  if(S.withingsConnected){
+    h+='<button id="withings-sync-btn" data-a="withings-sync" style="padding:6px 14px;background:var(--bg2);border:.5px solid var(--bd2);color:var(--tx);border-radius:var(--r);font-size:12px;font-weight:500;font-family:var(--sans)">'+icn('refresh')+' Sync now</button>';
+  }else{
+    h+='<a href="https://rlvvkepcqfzbvgwefjwc.supabase.co/functions/v1/withings-auth" style="padding:6px 14px;background:#000;color:#fff;border:none;border-radius:var(--r);font-size:13px;font-weight:500;font-family:var(--sans);text-decoration:none">Connect Withings</a>';
+  }
+  h+='</div>';
+
+  if(!S.withingsConnected){
+    h+='<div style="background:var(--bg2);border:.5px solid var(--bd);border-radius:var(--rl);padding:1.25rem;text-align:center">';
+    h+='<div style="font-size:32px;margin-bottom:.75rem">'+icn('scale')+'</div>';
+    h+='<div style="font-size:14px;font-weight:600;margin-bottom:.5rem">Connect your Withings Body Scan</div>';
+    h+='<div style="font-size:13px;color:var(--tx2);line-height:1.6;margin-bottom:1rem">Sync body composition, vascular age, PWV, and blood pressure directly into Tony³.</div>';
+    h+='<a href="https://rlvvkepcqfzbvgwefjwc.supabase.co/functions/v1/withings-auth" style="display:inline-block;padding:.75rem 1.5rem;background:#000;color:#fff;border-radius:var(--r);font-size:14px;font-weight:600;font-family:var(--sans);text-decoration:none">Connect Withings →</a>';
+    h+='</div>';
+    return h+'</div>';
+  }
+
+  var latest=S.withingsBody[0]||null;
+  var prev=S.withingsBody[1]||null;
+  var latestV=S.withingsVascular[0]||null;
+  var latestBP=S.withingsBP[0]||null;
+
+  // Latest body composition card
+  if(latest){
+    var wLbs=kgToLbs(latest.weight_kg);
+    var fLbs=kgToLbs(latest.fat_mass_kg);
+    var mLbs=kgToLbs(latest.muscle_mass_kg);
+    var fatPct=latest.fat_ratio!=null?latest.fat_ratio.toFixed(1):null;
+    var fatColor=fatPct<=14?'var(--tx-ok)':fatPct<=18?'var(--tx-warn)':'var(--tx-err)';
+    var prevFat=prev&&prev.fat_ratio!=null?prev.fat_ratio:null;
+    var fatDelta=fatPct&&prevFat?((parseFloat(fatPct)-prevFat)).toFixed(1):null;
+    var prevMuscle=prev?kgToLbsRaw(prev.muscle_mass_kg):null;
+    var muscleDelta=mLbs&&prevMuscle?(parseFloat(mLbs)-prevMuscle).toFixed(1):null;
+
+    h+='<div style="background:var(--bg2);border:.5px solid var(--bd);border-radius:var(--rl);padding:1rem;margin-bottom:.75rem">';
+    h+='<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--tx3);margin-bottom:.75rem">Latest scan — '+latest.date+'</div>';
+    h+='<div style="display:flex;gap:.75rem;flex-wrap:wrap">';
+
+    h+='<div style="flex:1;min-width:70px;text-align:center">';
+    h+='<div style="font-size:28px;font-weight:700;font-family:var(--mono)">'+(wLbs||'--')+'</div>';
+    h+='<div style="font-size:11px;color:var(--tx3)">Weight (lbs)</div></div>';
+
+    h+='<div style="flex:1;min-width:70px;text-align:center">';
+    h+='<div style="font-size:28px;font-weight:700;font-family:var(--mono);color:'+fatColor+'">'+(fatPct||'--')+'%</div>';
+    h+='<div style="font-size:11px;color:var(--tx3)">Body fat</div>';
+    if(fatDelta)h+='<div style="font-size:10px;color:'+(parseFloat(fatDelta)<0?'var(--tx-ok)':'var(--tx-err)')+'">'+( parseFloat(fatDelta)<0?'↓':'↑')+Math.abs(parseFloat(fatDelta))+'% vs prev</div>';
+    h+='</div>';
+
+    h+='<div style="flex:1;min-width:70px;text-align:center">';
+    h+='<div style="font-size:28px;font-weight:700;font-family:var(--mono);color:var(--tx-info)">'+(mLbs||'--')+'</div>';
+    h+='<div style="font-size:11px;color:var(--tx3)">Muscle (lbs)</div>';
+    if(muscleDelta)h+='<div style="font-size:10px;color:'+(parseFloat(muscleDelta)>0?'var(--tx-ok)':'var(--tx-err)')+'">'+( parseFloat(muscleDelta)>0?'↑':'↓')+Math.abs(parseFloat(muscleDelta))+' lbs vs prev</div>';
+    h+='</div>';
+
+    if(latest.visceral_fat!=null){
+      var vfColor=latest.visceral_fat<=9?'var(--tx-ok)':latest.visceral_fat<=14?'var(--tx-warn)':'var(--tx-err)';
+      h+='<div style="flex:1;min-width:70px;text-align:center">';
+      h+='<div style="font-size:28px;font-weight:700;font-family:var(--mono);color:'+vfColor+'">'+latest.visceral_fat.toFixed(1)+'</div>';
+      h+='<div style="font-size:11px;color:var(--tx3)">Visceral fat</div></div>';
+    }
+    h+='</div>';
+
+    // Target bars
+    h+='<div style="margin-top:.875rem">';
+    // Body fat target bar
+    if(fatPct){
+      var fatNum=parseFloat(fatPct);
+      var fatPct2=Math.min(100,(fatNum/25)*100);
+      var fatTarget=(14/25)*100;
+      h+='<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.375rem">';
+      h+='<div style="font-size:10px;color:var(--tx3);width:65px">Body fat</div>';
+      h+='<div style="flex:1;position:relative;height:6px;background:var(--bd);border-radius:3px">';
+      h+='<div style="position:absolute;left:0;top:0;height:100%;width:'+fatTarget+'%;background:var(--bg-ok);border-radius:3px"></div>';
+      h+='<div style="position:absolute;left:0;top:0;height:100%;width:'+fatPct2+'%;background:'+fatColor+';border-radius:3px"></div>';
+      h+='</div><div style="font-size:10px;color:var(--tx3);width:40px;text-align:right">Target 14%</div></div>';
+    }
+    // Muscle target bar
+    if(mLbs){
+      var mNum=parseFloat(mLbs);
+      var mPct=Math.min(100,(mNum/170)*100);
+      var mTarget=(157/170)*100;
+      h+='<div style="display:flex;align-items:center;gap:.5rem">';
+      h+='<div style="font-size:10px;color:var(--tx3);width:65px">Muscle</div>';
+      h+='<div style="flex:1;position:relative;height:6px;background:var(--bd);border-radius:3px">';
+      h+='<div style="position:absolute;left:0;top:0;height:100%;width:'+mTarget+'%;background:var(--bg-info);border-radius:3px"></div>';
+      h+='<div style="position:absolute;left:0;top:0;height:100%;width:'+mPct+'%;background:var(--tx-info);border-radius:3px"></div>';
+      h+='</div><div style="font-size:10px;color:var(--tx3);width:55px;text-align:right">Target 157 lbs</div></div>';
+    }
+    h+='</div></div>';
+  }
+
+  // Vascular card
+  if(latestV){
+    var vaColor=latestV.vascular_age<=49?'var(--tx-ok)':'var(--tx-warn)';
+    var pwvColor=latestV.pwv&&latestV.pwv<7.0?'var(--tx-ok)':'var(--tx-warn)';
+    h+='<div style="background:var(--bg2);border:.5px solid var(--bd);border-radius:var(--rl);padding:1rem;margin-bottom:.75rem">';
+    h+='<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--tx3);margin-bottom:.75rem">Vascular health — '+latestV.date+'</div>';
+    h+='<div style="display:flex;gap:1rem;flex-wrap:wrap">';
+    h+='<div style="flex:1;text-align:center"><div style="font-size:32px;font-weight:700;font-family:var(--mono);color:'+vaColor+'">'+(latestV.vascular_age||'--')+'</div>';
+    h+='<div style="font-size:11px;color:var(--tx3)">Vascular age</div>';
+    h+='<div style="font-size:10px;color:var(--tx3)">Chron. age: 50</div></div>';
+    if(latestV.pwv){
+      h+='<div style="flex:1;text-align:center"><div style="font-size:32px;font-weight:700;font-family:var(--mono);color:'+pwvColor+'">'+latestV.pwv.toFixed(1)+'</div>';
+      h+='<div style="font-size:11px;color:var(--tx3)">PWV (m/s)</div>';
+      h+='<div style="font-size:10px;color:var(--tx3)">Target below 7.0</div></div>';
+    }
+    h+='</div></div>';
+  }
+
+  // Blood pressure card
+  if(latestBP){
+    var sysColor=latestBP.systolic<120?'var(--tx-ok)':latestBP.systolic<130?'var(--tx-warn)':'var(--tx-err)';
+    h+='<div style="background:var(--bg2);border:.5px solid var(--bd);border-radius:var(--rl);padding:1rem;margin-bottom:.75rem">';
+    h+='<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--tx3);margin-bottom:.75rem">Blood pressure — '+latestBP.date+'</div>';
+    h+='<div style="display:flex;gap:1rem;flex-wrap:wrap">';
+    h+='<div style="flex:1;text-align:center"><div style="font-size:28px;font-weight:700;font-family:var(--mono);color:'+sysColor+'">'+(latestBP.systolic||'--')+'/'+(latestBP.diastolic||'--')+'</div>';
+    h+='<div style="font-size:11px;color:var(--tx3)">Systolic / Diastolic</div></div>';
+    if(latestBP.heart_rate){
+      h+='<div style="flex:1;text-align:center"><div style="font-size:28px;font-weight:700;font-family:var(--mono)">'+latestBP.heart_rate+'</div>';
+      h+='<div style="font-size:11px;color:var(--tx3)">Heart rate (bpm)</div></div>';
+    }
+    h+='</div></div>';
+  }
+
+  // Body composition trend table
+  if(S.withingsBody.length>1){
+    h+='<div style="font-size:13px;font-weight:600;margin-bottom:.5rem">Body composition history</div>';
+    h+='<div style="overflow-x:auto"><table class="data-table"><thead><tr><th>Date</th><th>Weight</th><th>Fat %</th><th>Muscle</th><th>Visceral</th></tr></thead><tbody>';
+    S.withingsBody.slice(0,20).forEach(function(b){
+      var f=b.fat_ratio!=null?b.fat_ratio.toFixed(1)+'%':'--';
+      var fc=b.fat_ratio!=null?(b.fat_ratio<=14?'var(--tx-ok)':b.fat_ratio<=18?'var(--tx-warn)':'var(--tx-err)'):'var(--tx3)';
+      h+='<tr>'
+        +'<td style="font-family:var(--mono)">'+b.date+'</td>'
+        +'<td style="font-family:var(--mono)">'+(kgToLbs(b.weight_kg)||'--')+' lbs</td>'
+        +'<td><span style="font-weight:700;color:'+fc+';font-family:var(--mono)">'+f+'</span></td>'
+        +'<td style="font-family:var(--mono)">'+(kgToLbs(b.muscle_mass_kg)||'--')+' lbs</td>'
+        +'<td style="font-family:var(--mono)">'+(b.visceral_fat!=null?b.visceral_fat.toFixed(1):'--')+'</td>'
+        +'</tr>';
+    });
+    h+='</tbody></table></div>';
+  }
+
+  return h+'</div>';
+}
+
 function doWhoopSync(){
   var btn=document.getElementById('whoop-sync-btn');
   if(btn){btn.textContent='Syncing...';btn.disabled=true;}
@@ -1371,7 +1570,7 @@ function rDesktopRight(){
     {id:'history',lb:'Full Log'},
     {id:'streaks',lb:'Streaks'},
     {id:'labs',lb:'Labs'},
-    {id:'whoop',lb:'WHOOP'},
+    {id:'whoop',lb:'WHOOP'},{id:'withings',lb:'Withings'},
     {id:'journal',lb:'Journal'},
     {id:'export',lb:'Export'}
   ];
@@ -1386,6 +1585,7 @@ function rDesktopRight(){
   else if(S.deskTab==='streaks') content=rDeskStreaks();
   else if(S.deskTab==='labs') content=rLabs();
   else if(S.deskTab==='whoop') content=rWhoop();
+  else if(S.deskTab==='withings') content=rWithings();
   else if(S.deskTab==='journal') content=rJournal();
   else if(S.deskTab==='export') content=rDeskExport();
 
@@ -1629,14 +1829,14 @@ function rHdr(){
   var syncDot=online?'<span style="width:6px;height:6px;border-radius:50%;background:var(--tx-ok);display:inline-block;margin-left:4px" title="Synced"></span>':'<span style="width:6px;height:6px;border-radius:50%;background:var(--tx-warn);display:inline-block;margin-left:4px" title="Offline - will sync when connected"></span>';
   return '<div class="hdr"><div class="hdr-left">'
     +'<span class="hdr-brand">Tony<span style="color:var(--tx-info);font-weight:700">\u00b3</span>'+syncDot+'</span>'
-    +'<span class="hdr-tag">T<span style="color:var(--tx-info);font-weight:700;font-size:17px">\u00b3</span> \u2014 longevity, performance, cognition <span style="font-size:10px;color:var(--tx3);font-family:var(--mono)">v0.34</span></span>'
+    +'<span class="hdr-tag">T<span style="color:var(--tx-info);font-weight:700;font-size:17px">\u00b3</span> \u2014 longevity, performance, cognition <span style="font-size:10px;color:var(--tx3);font-family:var(--mono)">v0.35</span></span>'
     +'</div>'+b+'</div>';
 }
 function rTabs(){
-  var ts=[{id:'today',ic:'calendar-check',lb:'Today'},{id:'history',ic:'history',lb:'Log'},{id:'compounds',ic:'pill',lb:'Compounds'},{id:'labs',ic:'test-pipe',lb:'Labs'},{id:'whoop',ic:'activity',lb:'WHOOP'},{id:'journal',ic:'notebook',lb:'Journal'},{id:'protocols',ic:'stack-2',lb:'Protocols'}];
+  var ts=[{id:'today',ic:'calendar-check',lb:'Today'},{id:'history',ic:'history',lb:'Log'},{id:'compounds',ic:'pill',lb:'Compounds'},{id:'labs',ic:'test-pipe',lb:'Labs'},{id:'whoop',ic:'activity',lb:'WHOOP'},{id:'withings',ic:'heart-rate-monitor',lb:'Body'},{id:'journal',ic:'notebook',lb:'Journal'},{id:'protocols',ic:'stack-2',lb:'Protocols'}];
   return '<div class="tabs">'+ts.map(function(t){return '<button class="tab'+(S.tab===t.id?' on':'')+'" data-a="tab" data-v="'+t.id+'">'+icn(t.ic)+'<span>'+t.lb+'</span></button>';}).join('')+'</div>';
 }
-function rContent(){if(S.tab==='today')return rToday();if(S.tab==='history')return rHistory();if(S.tab==='compounds')return rCompounds();if(S.tab==='labs')return rLabs();if(S.tab==='whoop')return rWhoop();if(S.tab==='journal')return rJournal();return rProtocols();}
+function rContent(){if(S.tab==='today')return rToday();if(S.tab==='history')return rHistory();if(S.tab==='compounds')return rCompounds();if(S.tab==='labs')return rLabs();if(S.tab==='whoop')return rWhoop();if(S.tab==='withings')return rWithings();if(S.tab==='journal')return rJournal();return rProtocols();}
 
 function rToday(){
   var act=S.cpds.filter(function(c){return c.status==='ACTIVE';});
@@ -2069,6 +2269,7 @@ function onClick(e){
   else if(a==='edit-journal'){S.editJournalId=el.dataset.jid;S.addingJournal=false;S.prevTab=S.tab;render(false);}
   else if(a==='delete-journal'){if(confirm('Delete this journal entry?')){S.journal=S.journal.filter(function(j){return j.id!==el.dataset.jid;});deleteJournal(el.dataset.jid);save();render(false);}}
   else if(a==='whoop-sync'){doWhoopSync();}
+  else if(a==='withings-sync'){doWithingsSync();}
   else if(a==='hist-prev'){navHist(-1);}
   else if(a==='hist-next'){navHist(1);}
   else if(a==='open-log'){S.prevTab=S.tab;S.logging={cid:cid,sid:null,editId:null};render(false);}
