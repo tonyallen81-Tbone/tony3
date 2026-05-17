@@ -2829,7 +2829,7 @@ function buildOura(){
   
   // 14-day readiness history table
   if(readiness.length > 0) {
-    h += '<div class="cgm-chart-wrap"><div class="cgm-header-row"><div class="cgm-chart-title">14-Day Readiness · '+rAvg+'% avg</div><button class="cgm-clear-btn" onclick="ouraState.loaded=false;ouraSetPAT('');rOuraPanelUpdate()">Disconnect</button></div>';
+    h += '<div class="cgm-chart-wrap"><div class="cgm-header-row"><div class="cgm-chart-title">14-Day Readiness · '+rAvg+'% avg</div><button class="cgm-clear-btn" onclick="ouraState.loaded=false;ouraSetPAT(String());rOuraPanelUpdate()">Disconnect</button></div>';
     h += '<div>';
     readiness.slice().reverse().slice(0,14).forEach(d=>{
       const sc=d.score;
