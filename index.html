@@ -976,7 +976,7 @@ function rLabs(){
   // Header
   h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem">';
   h+='<div><div style="font-size:16px;font-weight:600">Lab results</div>';
-  h+='<div style="font-size:11px;color:var(--tx3)">'+drawDates.length+' draw'+(drawDates.length!==1?'s':'')+' · tap any marker for detail</div></div>';
+  h+='<div style="font-size:11px;color:var(--tx3)">'+drawDates.length+' draw'+(drawDates.length!==1?'s':'')+' &middot; tap any marker for detail</div></div>';
   h+='<button data-a="add-lab" style="padding:6px 14px;background:var(--tx-info);color:#fff;border:none;border-radius:var(--r);font-size:13px;font-weight:500;font-family:var(--sans)">+ Add draw</button>';
   h+='</div>';
 
@@ -1083,7 +1083,7 @@ function rLabs(){
         h+='<div style="font-size:9px;color:var(--tx3);font-family:var(--mono)">'+e.draw_date.slice(2,7)+'</div>';
         h+='</div>';
       });
-      h+='<span style="font-size:10px;color:var(--tx3);margin-left:4px">Tap for full detail →</span>';
+      h+='<span style="font-size:10px;color:var(--tx3);margin-left:4px">Tap for full detail -></span>';
       h+='</div>';
     }
     h+='<div style="font-size:11px;color:var(--tx3);font-style:italic;line-height:1.5">'+esc(m.note)+'</div>';
@@ -1160,7 +1160,7 @@ function rJournal(){
   var h='<div class="body">';
   h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem">';
   h+='<div><div style="font-size:16px;font-weight:600">Protocol journal</div>';
-  h+='<div style="font-size:11px;color:var(--tx3)">'+S.journal.length+' entr'+(S.journal.length===1?'y':'ies')+' · weekly observations</div></div>';
+  h+='<div style="font-size:11px;color:var(--tx3)">'+S.journal.length+' entr'+(S.journal.length===1?'y':'ies')+' &middot; weekly observations</div></div>';
   h+='<button data-a="add-journal" style="padding:6px 14px;background:var(--tx-info);color:#fff;border:none;border-radius:var(--r);font-size:13px;font-weight:500;font-family:var(--sans)">+ New entry</button>';
   h+='</div>';
 
@@ -1247,7 +1247,7 @@ function rWithings(){  var h='<div class="body">';
     h+='<div style="font-size:32px;margin-bottom:.75rem">'+icn('scale')+'</div>';
     h+='<div style="font-size:14px;font-weight:600;margin-bottom:.5rem">Connect your Withings Body Scan</div>';
     h+='<div style="font-size:13px;color:var(--tx2);line-height:1.6;margin-bottom:1rem">Sync body composition, vascular age, PWV, and blood pressure directly into Tony³.</div>';
-    h+='<a href="https://rlvvkepcqfzbvgwefjwc.supabase.co/functions/v1/withings-auth" style="display:inline-block;padding:.75rem 1.5rem;background:#000;color:#fff;border-radius:var(--r);font-size:14px;font-weight:600;font-family:var(--sans);text-decoration:none">Connect Withings →</a>';
+    h+='<a href="https://rlvvkepcqfzbvgwefjwc.supabase.co/functions/v1/withings-auth" style="display:inline-block;padding:.75rem 1.5rem;background:#000;color:#fff;border-radius:var(--r);font-size:14px;font-weight:600;font-family:var(--sans);text-decoration:none">Connect Withings -></a>';
     h+='</div>';
     return h+'</div>';
   }
@@ -1374,7 +1374,7 @@ function rWithings(){  var h='<div class="body">';
       if(latestECG){
         const afibColor = latestECG.afib_classification==='normal'?'#1D9E75':latestECG.afib_classification==='afib'?'#E24B4A':'#BA7517';
         ecgCard += '<div style="font-size:22px;font-weight:500;color:'+afibColor+'">'+latestECG.afib_classification.toUpperCase()+'</div>';
-        ecgCard += '<div style="font-size:11px;color:var(--color-text-tertiary);margin-top:2px">Last reading: '+latestECG.date+(latestECG.heart_rate?' · HR '+latestECG.heart_rate+' bpm':'')+'</div>';
+        ecgCard += '<div style="font-size:11px;color:var(--color-text-tertiary);margin-top:2px">Last reading: '+latestECG.date+(latestECG.heart_rate?' &middot; HR '+latestECG.heart_rate+' bpm':'')+'</div>';
       } else {
         ecgCard += '<div style="font-size:13px;color:var(--color-text-tertiary)">No ECG data yet — step on scale and grip handle for 30s</div>';
       }
@@ -1458,7 +1458,7 @@ function rWhoop(){
     h+='<div style="font-size:32px;margin-bottom:.75rem">'+icn('activity')+'</div>';
     h+='<div style="font-size:14px;font-weight:600;margin-bottom:.5rem">Connect your WHOOP</div>';
     h+='<div style="font-size:13px;color:var(--tx2);line-height:1.6;margin-bottom:1rem">Sync your HRV, recovery score, sleep data, strain, and workouts directly into Tony³.</div>';
-    h+='<a href="https://rlvvkepcqfzbvgwefjwc.supabase.co/functions/v1/whoop-auth" style="display:inline-block;padding:.75rem 1.5rem;background:#000;color:#fff;border-radius:var(--r);font-size:14px;font-weight:600;font-family:var(--sans);text-decoration:none">Connect WHOOP →</a>';
+    h+='<a href="https://rlvvkepcqfzbvgwefjwc.supabase.co/functions/v1/whoop-auth" style="display:inline-block;padding:.75rem 1.5rem;background:#000;color:#fff;border-radius:var(--r);font-size:14px;font-weight:600;font-family:var(--sans);text-decoration:none">Connect WHOOP -></a>';
     h+='</div>';
     return h+'</div>';
   }
@@ -1715,7 +1715,7 @@ function rDeskRecentTable(days){
       h+='<tr>'
       +'<td style="white-space:nowrap">'+l.date+'<div style="font-size:10px;color:var(--tx3)">'+dow+'</div></td>'
       +'<td>'+l.time+'</td>'
-      +'<td class="tx"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+m.color+';margin-right:6px;vertical-align:middle"></span>'+esc(l.label?l.nm+' · '+l.label:l.nm)+'</td>'
+      +'<td class="tx"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+m.color+';margin-right:6px;vertical-align:middle"></span>'+esc(l.label?l.nm+' &middot; '+l.label:l.nm)+'</td>'
       +'<td>'+(l.dose!=null?l.dose+l.unit:'—')+'</td>'
       +'<td>'+esc(l.route||'')+'</td>'
       +'<td style="max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(l.notes||'')+'</td>'
@@ -1775,7 +1775,7 @@ function rDeskHistory(){
       html+='<tr>'
         +'<td style="font-family:var(--mono)">'+e.time+'</td>'
         +'<td class="tx"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+m.color+';margin-right:6px;vertical-align:middle"></span>'
-        +esc(e.label?e.nm+' · '+e.label:e.nm)+'</td>'
+        +esc(e.label?e.nm+' &middot; '+e.label:e.nm)+'</td>'
         +'<td>'+(e.dose!=null?e.dose+e.unit:'—')+'</td>'
         +'<td>'+esc(e.route||'')+'</td>'
         +'<td style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(e.notes||'')+'</td>'
@@ -2160,7 +2160,7 @@ function rHistory(){
           +'</div></div>';
       }else{
         var m=(PMETA[e.proto]||{color:'#888'});
-        var nm=e.label?esc(e.nm)+' · '+esc(e.label):esc(e.nm);
+        var nm=e.label?esc(e.nm)+' &middot; '+esc(e.label):esc(e.nm);
         h+='<div class="hist-row"><div class="hist-dot" style="background:'+m.color+'"></div><div class="hist-body">';
         h+='<div class="hist-head"><span class="hist-nm">'+nm;
         h+=e.copied?'<span class="tag tag-same">same</span>':'';
@@ -2171,7 +2171,7 @@ function rHistory(){
         h+='<button class="btn-edit" data-a="edit-log" data-lid="'+e.id+'">'+icn('pencil')+'</button>';
         h+='<button class="btn-edit" data-a="delete-log" data-lid="'+e.id+'" style="color:var(--tx-err)">'+icn('trash')+'</button>';
         h+='</div></div>';
-        h+='<div class="hist-meta">'+(e.dose!=null?e.dose+e.unit:'—')+' · '+e.route;
+        h+='<div class="hist-meta">'+(e.dose!=null?e.dose+e.unit:'—')+' &middot; '+e.route;
         h+=e.missed?'<span class="tag tag-missed">missed</span>':'';
         h+='</div>';
         h+=e.notes?'<div class="hist-note">&ldquo;'+esc(e.notes)+'&rdquo;</div>':'';
@@ -2524,7 +2524,7 @@ var LAB_DRAWS_SEED = [{"id": "lab_mar18_t", "draw_date": "2026-03-18", "draw_lab
 
 load();
 
-// ══ CGM v0.42 ══
+// == CGM v0.42 ==
 const CGM_TABLE='cgm_readings';
 function parseClarityCsv(text){const lines=text.split('\n').filter(l=>l.trim());const readings=[];let headerIdx=-1,headers=[];for(let i=0;i<Math.min(lines.length,20);i++){const cols=lines[i].split(',').map(c=>c.trim().replace(/"/g,''));if(cols.some(c=>c.toLowerCase().includes('timestamp')||c.toLowerCase()==='time')){headerIdx=i;headers=cols.map(c=>c.toLowerCase());break}}if(headerIdx<0)return{readings,error:'No header'};const tsIdx=headers.findIndex(h=>h.includes('timestamp')||h==='time');const glIdx=headers.findIndex(h=>h.includes('glucose')&&h.includes('mg'));if(tsIdx<0||glIdx<0)return{readings,error:'Missing columns'};const evIdx=headers.findIndex(h=>h.includes('event type'));const noteIdx=headers.findIndex(h=>h.includes('source')||h.includes('note'));for(let i=headerIdx+1;i<lines.length;i++){const cols=lines[i].split(',').map(c=>c.trim().replace(/"/g,''));if(!cols[tsIdx]||!cols[glIdx])continue;const glucose=parseFloat(cols[glIdx]);if(isNaN(glucose)||glucose<=0||glucose>600)continue;const dt=new Date(cols[tsIdx]);if(isNaN(dt.getTime()))continue;readings.push({id:'cgm_'+dt.getTime()+'_'+Math.random().toString(36).slice(2,6),timestamp:dt.toISOString(),glucose_mgdl:glucose,event_type:evIdx>=0?(cols[evIdx]||null):null,meal_notes:noteIdx>=0?(cols[noteIdx]||null):null,source:'clarity_csv'})}return{readings,error:null}}
 async function cgmUpload(readings){if(!readings.length)return{uploaded:0,error:'No readings'};let uploaded=0;for(let i=0;i<readings.length;i+=500){const chunk=readings.slice(i,i+500);const res=await sbUpsert(CGM_TABLE,chunk,'id');if(res&&res.error)return{uploaded,error:res.error.message};uploaded+=chunk.length}return{uploaded,error:null}}
@@ -2541,9 +2541,9 @@ function bindCgmEvents(){const z=document.getElementById("cgmDrop");const inp=do
 function rCgmPanel(){const el=document.getElementById('cgm-panel');if(el){el.innerHTML=buildCgm();bindCgmEvents()}}
 function buildCgm(){const{readings,importing}=cgmState;const up='<div class="cgm-upload-zone" id="cgmDrop"><input type="file" id="cgmFile" accept=".csv"><div class="cgm-upload-icon">📊</div><div class="cgm-upload-label">'+(importing?'Importing...':'Drop Dexcom Clarity CSV or click to browse')+'</div><div class="cgm-upload-sub">Export from clarity.dexcom.com</div></div>';if(importing)return'<div style="padding:12px">'+up+'<div class="cgm-empty"><div class="cgm-upload-icon">⏳</div>Parsing...</div></div>';if(!readings.length)return'<div style="padding:12px">'+up+'<div class="cgm-empty"><div class="cgm-empty-icon">🩺</div>No CGM data yet.<br>Upload a Dexcom Clarity export to see your glucose trends.</div></div>';const s=cgmStats(readings);const days=cgmByDay(readings);const today=new Date().toISOString().substring(0,10);const todayR=readings.filter(r=>r.timestamp.substring(0,10)===today);const stats='<div class="cgm-stats-row"><div class="cgm-stat"><div class="cgm-stat-label">Average</div><div class="cgm-stat-value" style="color:'+(s.avg>140?'#BA7517':s.avg<70?'#378ADD':'#1D9E75')+'">'+s.avg+'</div><div class="cgm-stat-unit">mg/dL</div></div><div class="cgm-stat"><div class="cgm-stat-label">GMI</div><div class="cgm-stat-value" style="color:'+(parseFloat(s.gmi)>6.5?'#BA7517':'#1D9E75')+'">'+s.gmi+'</div><div class="cgm-stat-unit">%</div></div><div class="cgm-stat"><div class="cgm-stat-label">Std Dev</div><div class="cgm-stat-value">'+s.sd+'</div><div class="cgm-stat-unit">mg/dL</div></div><div class="cgm-stat"><div class="cgm-stat-label">CV</div><div class="cgm-stat-value" style="color:'+(parseFloat(s.cv)>36?'#BA7517':'#1D9E75')+'">'+s.cv+'</div><div class="cgm-stat-unit">% (target &lt;36)</div></div></div>';const tir='<div class="cgm-chart-wrap"><div class="cgm-chart-title">Time in Range &mdash; '+readings.length+' readings</div><div class="tir-bar"><div class="tir-seg tir-very-high" style="width:'+s.tir.vhigh+'%"></div><div class="tir-seg tir-high" style="width:'+s.tir.high+'%"></div><div class="tir-seg tir-in-range" style="width:'+s.tir.inRange+'%"></div><div class="tir-seg tir-low" style="width:'+s.tir.low+'%"></div><div class="tir-seg tir-very-low" style="width:'+s.tir.vlow+'%"></div></div><div class="tir-legend"><div class="tir-legend-item"><div class="tir-dot" style="background:#E24B4A"></div>Very High '+s.tir.vhigh+'%</div><div class="tir-legend-item"><div class="tir-dot" style="background:#BA7517"></div>High '+s.tir.high+'%</div><div class="tir-legend-item"><div class="tir-dot" style="background:#1D9E75"></div>In Range '+s.tir.inRange+'%</div><div class="tir-legend-item"><div class="tir-dot" style="background:#378ADD"></div>Low '+s.tir.low+'%</div><div class="tir-legend-item"><div class="tir-dot" style="background:#7B5EA7"></div>Very Low '+s.tir.vlow+'%</div></div></div>';const todayChart=todayR.length?'<div class="cgm-chart-wrap"><div class="cgm-chart-title">Today &mdash; Fasting: '+cgmBadge(Math.round(todayR[0].glucose_mgdl))+'</div>'+cgmSparklineAnnotated(todayR, typeof corrState!=="undefined"&&corrState.data.cycles?corrState.data.cycles:[])+'<div style="display:flex;justify-content:space-between;font-size:9px;color:var(--color-text-tertiary);margin-top:4px"><span>12am</span><span>6am</span><span>12pm</span><span>6pm</span><span>12am</span></div></div>':'';const dayRows=days.slice(0,14).map(d=>{const ac=d.avg>140?'#BA7517':d.avg<70?'#378ADD':'#1D9E75';const tc=d.tir>=70?'#1D9E75':d.tir>=50?'#BA7517':'#E24B4A';const dow=new Date(d.date+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});return'<div class="cgm-day-row"><span class="cgm-day-date">'+dow+'</span><span class="cgm-day-avg" style="color:'+ac+'">'+d.avg+' mg/dL</span><span class="cgm-day-tir" style="color:'+tc+'">'+d.tir+'% in range</span><span class="cgm-day-range">'+d.min+'&ndash;'+d.max+'</span></div>'}).join('');const table='<div class="cgm-chart-wrap"><div class="cgm-header-row"><div class="cgm-chart-title">Daily breakdown</div><div style="display:flex;gap:8px"><button class="cgm-import-btn" onclick="cgmFile.click()">+ Import CSV</button><button class="cgm-clear-btn" onclick="cgmClear()">Clear</button></div></div>'+dayRows+'</div>';return'<div style="padding:12px">'+up+stats+tir+todayChart+table+'</div>'}
 function rCgm(){if(!cgmState.loaded)cgmInit();return'<div id="cgm-panel" style="overflow-y:auto;height:100%">'+buildCgm()+'</div>'}
-// ══ END CGM ══
+// == END CGM ==
 
-// ══ WHOOP WORKOUT ANNOTATIONS + CORRELATION VIEW v0.42 ══
+// == WHOOP WORKOUT ANNOTATIONS + CORRELATION VIEW v0.42 ==
 
 // ── Load WHOOP cycles (strain/workout data) ──
 async function whoopCyclesLoad(days=30){
@@ -2600,7 +2600,7 @@ function cgmSparklineAnnotated(readings, workouts, w=500, h=70){
     const strain=w.score_strain||0;
     const ht=Math.min(h,Math.max(10,strain/21*h));
     const color=strain>=14?'#E24B4A':strain>=10?'#BA7517':'#1D9E75';
-    return`<line x1="${x}" y1="${(h-ht).toFixed(1)}" x2="${x}" y2="${h}" stroke="${color}" stroke-width="2" opacity="0.7"><title>Strain ${strain.toFixed(1)} · ${ts.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})}</title></line>
+    return`<line x1="${x}" y1="${(h-ht).toFixed(1)}" x2="${x}" y2="${h}" stroke="${color}" stroke-width="2" opacity="0.7"><title>Strain ${strain.toFixed(1)} &middot; ${ts.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})}</title></line>
     <text x="${x}" y="${(h-ht-3).toFixed(1)}" font-size="7" fill="${color}" text-anchor="middle" opacity="0.8">${strain.toFixed(0)}</text>`;
   }).join('');
   
@@ -2708,7 +2708,7 @@ function buildCorr(){
     <div class="corr-stream">
       <div class="corr-stream-header">
         <span class="corr-stream-label" style="color:#1D9E75">🩸 Glucose avg</span>
-        <span class="corr-stream-stat">${glucoseAvg||'—'} mg/dL avg · target &lt;90 fasting</span>
+        <span class="corr-stream-stat">${glucoseAvg||'—'} mg/dL avg &middot; target &lt;90 fasting</span>
       </div>
       ${glucoseStream}
     </div>
@@ -2724,7 +2724,7 @@ function buildCorr(){
     <div class="corr-stream">
       <div class="corr-stream-header">
         <span class="corr-stream-label" style="color:#E24B4A">🔥 Day Strain</span>
-        <span class="corr-stream-stat">${strainAvg||'—'} avg · target 12–18</span>
+        <span class="corr-stream-stat">${strainAvg||'—'} avg &middot; target 12–18</span>
       </div>
       ${strainStream}
     </div>
@@ -2732,7 +2732,7 @@ function buildCorr(){
     <div class="corr-stream">
       <div class="corr-stream-header">
         <span class="corr-stream-label" style="color:#BA7517">⚖️ Body fat %</span>
-        <span class="corr-stream-stat">${fatAvg||'—'}% avg · target ≤13%</span>
+        <span class="corr-stream-stat">${fatAvg||'—'}% avg &middot; target ≤13%</span>
       </div>
       ${fatStream}
     </div>
@@ -2752,11 +2752,11 @@ function rCorr(){
   if(!corrState.loaded){corrLoad(corrState.days);return'<div id="corr-panel" style="overflow-y:auto;height:100%"><div class="corr-no-data" style="padding:40px">Loading...</div></div>';}
   return'<div id="corr-panel" style="overflow-y:auto;height:100%">'+buildCorr()+'</div>';
 }
-// ══ END CORRELATION + ANNOTATIONS ══
+// == END CORRELATION + ANNOTATIONS ==
 
 function streakDenom(c){if(!c||!c.freq)return 7;var f=c.freq.toLowerCase();if(f==="weekly"||f==="1x/wk")return 1;if(f==="daily")return 7;var m=f.match(/^(\d+)/);return m?parseInt(m[1]):7;}
 
-// ══ OURA RING 4 INTEGRATION ══
+// == OURA RING 4 INTEGRATION ==
 const OURA_PAT_KEY = 'tony3_oura_pat';
 
 function ouraGetPAT(){ return localStorage.getItem(OURA_PAT_KEY)||''; }
@@ -2794,7 +2794,7 @@ async function ouraInit(){
 
 function buildOura(){
   const pat = ouraGetPAT();
-  const connectForm = '<div style="padding:24px;max-width:400px"><div style="font-size:15px;font-weight:600;margin-bottom:8px">Connect Oura Ring</div><div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:16px">Enter your Oura Personal Access Token to sync readiness, sleep, temperature deviation, and activity data.</div><div style="margin-bottom:8px"><input id="oura-pat-input" type="password" value="'+esc(pat)+'" placeholder="Paste your Oura PAT here" style="width:100%;padding:10px 12px;border-radius:8px;border:.5px solid var(--color-border-secondary);background:var(--color-background-secondary);color:var(--color-text-primary);font-size:13px;box-sizing:border-box"></div><div style="display:flex;gap:8px"><button class="cgm-import-btn" onclick="ouraConnect()">Connect</button><a href="https://cloud.ouraring.com/personal-access-tokens" target="_blank" style="font-size:11px;color:var(--tx,#1D9E75);align-self:center">Get PAT →</a></div><div style="font-size:10px;color:var(--color-text-tertiary);margin-top:8px">Token stored locally. Never sent to our servers.</div></div>';
+  const connectForm = '<div style="padding:24px;max-width:400px"><div style="font-size:15px;font-weight:600;margin-bottom:8px">Connect Oura Ring</div><div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:16px">Enter your Oura Personal Access Token to sync readiness, sleep, temperature deviation, and activity data.</div><div style="margin-bottom:8px"><input id="oura-pat-input" type="password" value="'+esc(pat)+'" placeholder="Paste your Oura PAT here" style="width:100%;padding:10px 12px;border-radius:8px;border:.5px solid var(--color-border-secondary);background:var(--color-background-secondary);color:var(--color-text-primary);font-size:13px;box-sizing:border-box"></div><div style="display:flex;gap:8px"><button class="cgm-import-btn" onclick="ouraConnect()">Connect</button><a href="https://cloud.ouraring.com/personal-access-tokens" target="_blank" style="font-size:11px;color:var(--tx,#1D9E75);align-self:center">Get PAT -></a></div><div style="font-size:10px;color:var(--color-text-tertiary);margin-top:8px">Token stored locally. Never sent to our servers.</div></div>';
   
   if(!pat || !ouraState.loaded) return connectForm + (ouraState.loading ? '<div style="padding:20px;text-align:center;color:var(--color-text-tertiary)">Loading...</div>' : '');
   if(!ouraState.data) return connectForm + '<div style="padding:20px;text-align:center;color:#E24B4A">Could not connect. Check your PAT.</div>';
@@ -2824,18 +2824,18 @@ function buildOura(){
   h += '<div class="cgm-stats-row" style="grid-template-columns:repeat(3,1fr)">';
   h += '<div class="cgm-stat"><div class="cgm-stat-label">Readiness</div><div class="cgm-stat-value" style="color:'+rColor+'">'+rScore+'</div><div class="cgm-stat-unit">'+latestR?.day||''+'</div></div>';
   h += '<div class="cgm-stat"><div class="cgm-stat-label">Sleep Score</div><div class="cgm-stat-value" style="color:'+sColor+'">'+sScore+'</div><div class="cgm-stat-unit">'+Math.round((latestS?.total_sleep_duration||0)/3600*10)/10+'h sleep</div></div>';
-  h += '<div class="cgm-stat"><div class="cgm-stat-label">Temp Deviation</div><div class="cgm-stat-value" style="color:'+tempColor+'">'+(tempDev!==undefined?(tempDev>0?'+':'')+tempDev.toFixed(2):'--')+'</div><div class="cgm-stat-unit">°C from baseline</div></div>';
+  h += '<div class="cgm-stat"><div class="cgm-stat-label">Temp Deviation</div><div class="cgm-stat-value" style="color:'+tempColor+'">'+(tempDev!==undefined?(tempDev>0?'+':'')+tempDev.toFixed(2):'--')+'</div><div class="cgm-stat-unit"> degC from baseline</div></div>';
   h += '</div>';
   
   // 14-day readiness history table
   if(readiness.length > 0) {
-    h += '<div class="cgm-chart-wrap"><div class="cgm-header-row"><div class="cgm-chart-title">14-Day Readiness · '+rAvg+'% avg</div><button class="cgm-clear-btn" onclick="ouraState.loaded=false;ouraSetPAT(String());rOuraPanelUpdate()">Disconnect</button></div>';
+    h += '<div class="cgm-chart-wrap"><div class="cgm-header-row"><div class="cgm-chart-title">14-Day Readiness &middot; '+rAvg+'% avg</div><button class="cgm-clear-btn" onclick="ouraState.loaded=false;ouraSetPAT(String());rOuraPanelUpdate()">Disconnect</button></div>';
     h += '<div>';
     readiness.slice().reverse().slice(0,14).forEach(d=>{
       const sc=d.score;
       const c=sc>=80?'#1D9E75':sc>=60?'#BA7517':'#E24B4A';
       const tempD=d.temperature_deviation;
-      const tempStr=tempD!==undefined?(' · temp '+(tempD>0?'+':'')+tempD.toFixed(1)+'°C'):'';
+      const tempStr=tempD!==undefined?(' &middot; temp '+(tempD>0?'+':'')+tempD.toFixed(1)+' degC'):'';
       h+='<div class="cgm-day-row"><span class="cgm-day-date">'+d.day+'</span><span class="cgm-day-avg" style="color:'+c+'">'+sc+'%</span><span class="cgm-day-tir">Readiness</span><span class="cgm-day-range" style="color:'+(tempD!==undefined&&Math.abs(tempD)>0.5?'#BA7517':'var(--color-text-tertiary)')+'">'+tempStr+'</span></div>';
     });
     h += '</div></div>';
@@ -2866,7 +2866,7 @@ function rOura(){
   if(!ouraState.loaded&&!ouraState.loading) ouraInit();
   return '<div id="oura-panel" style="overflow-y:auto;height:100%">'+buildOura()+'</div>';
 }
-// ══ END OURA ══
+// == END OURA ==
 </script>
 </body>
 </html>
