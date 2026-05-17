@@ -1199,7 +1199,6 @@ function kgToLbs(kg){return kg?(kg*2.20462).toFixed(1):null;}
 function kgToLbsRaw(kg){return kg?kg*2.20462:null;}
 
 function rWithings(){
-  if(t==='cgm')return rCgm();
   if(t==='cgm'){if(!cgmState.loaded)cgmInit();return'<div id="cgm-panel" style="overflow-y:auto;height:100%">'+buildCgm()+'</div>'}
   var h='<div class="body">';
 
@@ -1614,6 +1613,7 @@ function rDesktopRight(){
   else if(S.deskTab==='labs') content=rLabs();
   else if(S.deskTab==='whoop') content=rWhoop();
   else if(S.deskTab==='withings') content=rWithings();
+  else if(S.deskTab==='cgm') content=rCgm();
   else if(S.deskTab==='journal') content=rJournal();
   else if(S.deskTab==='export') content=rDeskExport();
 
