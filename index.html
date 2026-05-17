@@ -28,7 +28,7 @@ textarea{resize:none}
 .hdr-brand{font-size:16px;font-weight:600;font-family:var(--mono)}
 .hdr-tag{font-size:13px;color:var(--tx3);font-family:var(--sans)}
 .hdr-badge{font-size:12px;font-weight:500;padding:3px 9px;border-radius:var(--r);background:var(--bg-info);color:var(--tx-info)}
-.tabs{display:flex;border-bottom:.5px solid var(--bd);background:var(--bg);position:sticky;top:60px;z-index:9}
+.tabs::-webkit-scrollbar{display:none}.tabs{display:flex;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;border-bottom:.5px solid var(--bd);background:var(--bg);position:sticky;top:60px;z-index:9}
 .tab{flex:1;padding:8px 2px;font-size:11px;font-weight:500;text-align:center;cursor:pointer;color:var(--tx3);background:none;border:none;border-bottom:2px solid transparent;font-family:var(--sans);display:flex;flex-direction:column;align-items:center;gap:2px}
 .tab i{font-size:16px}
 .tab.on{color:var(--tx);border-bottom-color:var(--tx)}
@@ -201,7 +201,7 @@ textarea{resize:none}
   .desktop-right-inner{display:none!important}
 }
 
-/* ── CGM TAB v0.39 ── */
+/* ── CGM TAB v0.40 ── */
 .cgm-upload-zone{border:1.5px dashed var(--color-border-secondary);border-radius:12px;padding:28px 20px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s;margin-bottom:16px}
 .cgm-upload-zone:hover,.cgm-upload-zone.drag-over{border-color:var(--tx);background:rgba(29,158,117,.06)}
 .cgm-upload-zone input[type=file]{display:none}
@@ -1883,14 +1883,14 @@ function rHdr(){
   var syncDot=online?'<span style="width:6px;height:6px;border-radius:50%;background:var(--tx-ok);display:inline-block;margin-left:4px" title="Synced"></span>':'<span style="width:6px;height:6px;border-radius:50%;background:var(--tx-warn);display:inline-block;margin-left:4px" title="Offline - will sync when connected"></span>';
   return '<div class="hdr"><div class="hdr-left">'
     +'<span class="hdr-brand">Tony<span style="color:var(--tx-info);font-weight:700">\u00b3</span>'+syncDot+'</span>'
-    +'<span class="hdr-tag">T<span style="color:var(--tx-info);font-weight:700;font-size:17px">\u00b3</span> \u2014 longevity, performance, cognition <span style="font-size:10px;color:var(--tx3);font-family:var(--mono)">v0.39</span></span>'
+    +'<span class="hdr-tag">T<span style="color:var(--tx-info);font-weight:700;font-size:17px">\u00b3</span> \u2014 longevity, performance, cognition <span style="font-size:10px;color:var(--tx3);font-family:var(--mono)">v0.40</span></span>'
     +'</div>'+b+'</div>';
 }
 function rTabs(){
-  var ts=[{id:'today',ic:'calendar-check',lb:'Today'},{id:'history',ic:'history',lb:'Log'},{id:'compounds',ic:'pill',lb:'Compounds'},{id:'labs',ic:'test-pipe',lb:'Labs'},{id:'whoop',ic:'activity',lb:'WHOOP'},{id:'withings',ic:'heart-rate-monitor',lb:'Body'},{id:'journal',ic:'notebook',lb:'Journal'},{id:'protocols',ic:'stack-2',lb:'Protocols'}];
+  var ts=[{id:'today',ic:'calendar-check',lb:'Today'},{id:'history',ic:'history',lb:'Log'},{id:'compounds',ic:'pill',lb:'Compounds'},{id:'labs',ic:'test-pipe',lb:'Labs'},{id:'whoop',ic:'activity',lb:'WHOOP'},{id:'withings',ic:'heart-rate-monitor',lb:'Withings'},{id:'journal',ic:'notebook',lb:'Journal'},{id:'cgm',ic:'chart-line',lb:'CGM'},{id:'corr',ic:'arrows-join',lb:'Insights'},{id:'protocols',ic:'stack-2',lb:'Protocols'}];
   return '<div class="tabs">'+ts.map(function(t){return '<button class="tab'+(S.tab===t.id?' on':'')+'" data-a="tab" data-v="'+t.id+'">'+icn(t.ic)+'<span>'+t.lb+'</span></button>';}).join('')+'</div>';
 }
-function rContent(){if(S.tab==='today')return rToday();if(S.tab==='history')return rHistory();if(S.tab==='compounds')return rCompounds();if(S.tab==='labs')return rLabs();if(S.tab==='whoop')return rWhoop();if(S.tab==='withings')return rWithings();if(S.tab==='journal')return rJournal();return rProtocols();}
+function rContent(){if(S.tab==='today')return rToday();if(S.tab==='history')return rHistory();if(S.tab==='compounds')return rCompounds();if(S.tab==='labs')return rLabs();if(S.tab==='whoop')return rWhoop();if(S.tab==='withings')return rWithings();if(S.tab==='journal')return rJournal();if(S.tab==='cgm')return rCgm();if(S.tab==='corr')return rCorr();return rProtocols();}
 
 function rToday(){
   var act=S.cpds.filter(function(c){return c.status==='ACTIVE';});
@@ -2495,7 +2495,7 @@ var LAB_DRAWS_SEED = [{"id": "lab_mar18_t", "draw_date": "2026-03-18", "draw_lab
 
 load();
 
-// ══ CGM v0.39 ══
+// ══ CGM v0.40 ══
 const CGM_TABLE='cgm_readings';
 function parseClarityCsv(text){const lines=text.split('\n').filter(l=>l.trim());const readings=[];let headerIdx=-1,headers=[];for(let i=0;i<Math.min(lines.length,20);i++){const cols=lines[i].split(',').map(c=>c.trim().replace(/"/g,''));if(cols.some(c=>c.toLowerCase().includes('timestamp')||c.toLowerCase()==='time')){headerIdx=i;headers=cols.map(c=>c.toLowerCase());break}}if(headerIdx<0)return{readings,error:'No header'};const tsIdx=headers.findIndex(h=>h.includes('timestamp')||h==='time');const glIdx=headers.findIndex(h=>h.includes('glucose')&&h.includes('mg'));if(tsIdx<0||glIdx<0)return{readings,error:'Missing columns'};const evIdx=headers.findIndex(h=>h.includes('event type'));const noteIdx=headers.findIndex(h=>h.includes('source')||h.includes('note'));for(let i=headerIdx+1;i<lines.length;i++){const cols=lines[i].split(',').map(c=>c.trim().replace(/"/g,''));if(!cols[tsIdx]||!cols[glIdx])continue;const glucose=parseFloat(cols[glIdx]);if(isNaN(glucose)||glucose<=0||glucose>600)continue;const dt=new Date(cols[tsIdx]);if(isNaN(dt.getTime()))continue;readings.push({id:'cgm_'+dt.getTime()+'_'+Math.random().toString(36).slice(2,6),timestamp:dt.toISOString(),glucose_mgdl:glucose,event_type:evIdx>=0?(cols[evIdx]||null):null,meal_notes:noteIdx>=0?(cols[noteIdx]||null):null,source:'clarity_csv'})}return{readings,error:null}}
 async function cgmUpload(readings){if(!readings.length)return{uploaded:0,error:'No readings'};let uploaded=0;for(let i=0;i<readings.length;i+=500){const chunk=readings.slice(i,i+500);const res=await sbUpsert(CGM_TABLE,chunk,'id');if(res&&res.error)return{uploaded,error:res.error.message};uploaded+=chunk.length}return{uploaded,error:null}}
@@ -2514,7 +2514,7 @@ function buildCgm(){const{readings,importing}=cgmState;const up='<div class="cgm
 function rCgm(){if(!cgmState.loaded)cgmInit();return'<div id="cgm-panel" style="overflow-y:auto;height:100%">'+buildCgm()+'</div>'}
 // ══ END CGM ══
 
-// ══ WHOOP WORKOUT ANNOTATIONS + CORRELATION VIEW v0.39 ══
+// ══ WHOOP WORKOUT ANNOTATIONS + CORRELATION VIEW v0.40 ══
 
 // ── Load WHOOP cycles (strain/workout data) ──
 async function whoopCyclesLoad(days=30){
@@ -2720,8 +2720,8 @@ function buildCorr(){
 function bindCorrEvents(){} // range btns use inline onclick
 
 function rCorr(){
-  if(!corrState.loaded)corrLoad(corrState.days);
-  return'<div id="corr-panel" style="overflow-y:auto;height:100%"><div class="corr-no-data" style="padding:40px">Loading...</div></div>';
+  if(!corrState.loaded){corrLoad(corrState.days);return'<div id="corr-panel" style="overflow-y:auto;height:100%"><div class="corr-no-data" style="padding:40px">Loading...</div></div>';}
+  return'<div id="corr-panel" style="overflow-y:auto;height:100%">'+buildCorr()+'</div>';
 }
 // ══ END CORRELATION + ANNOTATIONS ══
 </script>
