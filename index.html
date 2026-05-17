@@ -290,7 +290,7 @@ var SEED=[
   {id:'c5', name:'Peptide Blend (BPC-157 + TB-500 + GHK-Cu)',protocol:'Peptide Stack',dose:null,unit:'mcg',route:'Subcutaneous',freq:'TBD',time:null,status:'ACTIVE',start:null,notes:'Single combined injection. Dose/frequency TBD.'},
   {id:'c7', name:'NMN',                   protocol:'Tier 1 Stack',  dose:500, unit:'mg',     route:'Oral',         freq:'Daily',    time:'09:00',status:'UPCOMING',start:'2026-06-01',notes:'AM with morning routine + fish oil. Genex brand. Start as received.'},
   {id:'c8', name:'Resveratrol (trans)',    protocol:'Tier 1 Stack',  dose:500, unit:'mg',     route:'Oral',         freq:'Daily',    time:'09:00',status:'UPCOMING',start:'2026-06-01',notes:'AM with fat. Genex Power Pack.'},
-  {id:'c9', name:'Berberine',             protocol:'Tier 1 Stack',  dose:null,unit:'mg',     route:'Oral',         freq:'3x/day',  time:null,   status:'UPCOMING',start:'2026-06-01',notes:'Genex Power Pack. AMPK activator — glucose control.',
+  {id:'c9', name:'Berberine',             protocol:'Tier 1 Stack',  dose:500,unit:'mg',     route:'Oral',         freq:'3x/day',  time:null,   status:'UPCOMING',start:'2026-06-01',notes:'Genex Power Pack. AMPK activator — glucose control.',
     splits:[
       {sid:'s9a',label:'With breakfast',dose:500,unit:'mg',time:'09:00'},
       {sid:'s9b',label:'With lunch',    dose:500,unit:'mg',time:'13:00'},
@@ -1282,7 +1282,7 @@ function rWithings(){
       h+='<div style="flex:1;position:relative;height:6px;background:var(--bd);border-radius:3px">';
       h+='<div style="position:absolute;left:0;top:0;height:100%;width:'+fatTarget+'%;background:var(--bg-ok);border-radius:3px"></div>';
       h+='<div style="position:absolute;left:0;top:0;height:100%;width:'+fatPct2+'%;background:'+fatColor+';border-radius:3px"></div>';
-      h+='</div><div style="font-size:10px;color:var(--tx3);width:40px;text-align:right">Target 14%</div></div>';
+      h+='</div><div style="font-size:10px;color:var(--tx3);width:40px;text-align:right">Target 13%</div></div>';
     }
     // Muscle target bar
     if(mLbs){
@@ -1857,7 +1857,7 @@ function rHdr(){
   var syncDot=online?'<span style="width:6px;height:6px;border-radius:50%;background:var(--tx-ok);display:inline-block;margin-left:4px" title="Synced"></span>':'<span style="width:6px;height:6px;border-radius:50%;background:var(--tx-warn);display:inline-block;margin-left:4px" title="Offline - will sync when connected"></span>';
   return '<div class="hdr"><div class="hdr-left">'
     +'<span class="hdr-brand">Tony<span style="color:var(--tx-info);font-weight:700">\u00b3</span>'+syncDot+'</span>'
-    +'<span class="hdr-tag">T<span style="color:var(--tx-info);font-weight:700;font-size:17px">\u00b3</span> \u2014 longevity, performance, cognition <span style="font-size:10px;color:var(--tx3);font-family:var(--mono)">v0.37</span></span>'
+    +'<span class="hdr-tag">T<span style="color:var(--tx-info);font-weight:700;font-size:17px">\u00b3</span> \u2014 longevity, performance, cognition <span style="font-size:10px;color:var(--tx3);font-family:var(--mono)">v0.38</span></span>'
     +'</div>'+b+'</div>';
 }
 function rTabs(){
@@ -2339,7 +2339,7 @@ var CPD_INFO = {
   'c3':{
     what:'Semaglutide — GLP-1 receptor agonist. Originally a diabetes drug, now used for metabolic health and weight management.',
     why:'You are on a minimum effective dose (MED) protocol at 10 IU/week. GLP-1 agonists reduce appetite, improve insulin sensitivity, protect neurons via GLP-1 receptors in the brain, and reduce systemic inflammation. Your fasting glucose baseline of 96 mg/dL makes metabolic optimization a priority.',
-    watch:'Fasting glucose (target below 90 mg/dL). Body fat % on Withings (target 14% or lower). WHOOP recovery — if it drops sharply, dose may be too high. HbA1c at June labs (target 5.6% or lower).',
+    watch:'Fasting glucose (target below 90 mg/dL). Body fat % on Withings (target 13% or lower). WHOOP recovery — if it drops sharply, dose may be too high. HbA1c at June labs (target 5.6% or lower).',
     timing:'Saturday 9am subcutaneous. Same day as TRT for simplicity. Currently finding your MED — do not adjust without tracking glucose response first.'
   },
   'c4':{
