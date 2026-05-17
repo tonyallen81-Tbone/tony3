@@ -201,7 +201,7 @@ textarea{resize:none}
   .desktop-right-inner{display:none!important}
 }
 
-/* ── CGM TAB v0.42 ── */
+/* ── CGM TAB v0.43 ── */
 .cgm-upload-zone{border:1.5px dashed var(--color-border-secondary);border-radius:12px;padding:28px 20px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s;margin-bottom:16px}
 .cgm-upload-zone:hover,.cgm-upload-zone.drag-over{border-color:var(--tx);background:rgba(29,158,117,.06)}
 .cgm-upload-zone input[type=file]{display:none}
@@ -1912,7 +1912,7 @@ function rHdr(){
   var syncDot=online?'<span style="width:6px;height:6px;border-radius:50%;background:var(--tx-ok);display:inline-block;margin-left:4px" title="Synced"></span>':'<span style="width:6px;height:6px;border-radius:50%;background:var(--tx-warn);display:inline-block;margin-left:4px" title="Offline - will sync when connected"></span>';
   return '<div class="hdr"><div class="hdr-left">'
     +'<span class="hdr-brand">Tony<span style="color:var(--tx-info);font-weight:700">\u00b3</span>'+syncDot+'</span>'
-    +'<span class="hdr-tag">T<span style="color:var(--tx-info);font-weight:700;font-size:17px">\u00b3</span> \u2014 longevity, performance, cognition <span style="font-size:10px;color:var(--tx3);font-family:var(--mono)">v0.42</span></span>'
+    +'<span class="hdr-tag">T<span style="color:var(--tx-info);font-weight:700;font-size:17px">\u00b3</span> \u2014 longevity, performance, cognition <span style="font-size:10px;color:var(--tx3);font-family:var(--mono)">v0.43</span></span>'
     +'</div>'+b+'</div>';
 }
 function rTabs(){
@@ -2524,7 +2524,7 @@ var LAB_DRAWS_SEED = [{"id": "lab_mar18_t", "draw_date": "2026-03-18", "draw_lab
 
 load();
 
-// == CGM v0.42 ==
+// == CGM v0.43 ==
 const CGM_TABLE='cgm_readings';
 function parseClarityCsv(text){const lines=text.split('\n').filter(l=>l.trim());const readings=[];let headerIdx=-1,headers=[];for(let i=0;i<Math.min(lines.length,20);i++){const cols=lines[i].split(',').map(c=>c.trim().replace(/"/g,''));if(cols.some(c=>c.toLowerCase().includes('timestamp')||c.toLowerCase()==='time')){headerIdx=i;headers=cols.map(c=>c.toLowerCase());break}}if(headerIdx<0)return{readings,error:'No header'};const tsIdx=headers.findIndex(h=>h.includes('timestamp')||h==='time');const glIdx=headers.findIndex(h=>h.includes('glucose')&&h.includes('mg'));if(tsIdx<0||glIdx<0)return{readings,error:'Missing columns'};const evIdx=headers.findIndex(h=>h.includes('event type'));const noteIdx=headers.findIndex(h=>h.includes('source')||h.includes('note'));for(let i=headerIdx+1;i<lines.length;i++){const cols=lines[i].split(',').map(c=>c.trim().replace(/"/g,''));if(!cols[tsIdx]||!cols[glIdx])continue;const glucose=parseFloat(cols[glIdx]);if(isNaN(glucose)||glucose<=0||glucose>600)continue;const dt=new Date(cols[tsIdx]);if(isNaN(dt.getTime()))continue;readings.push({id:'cgm_'+dt.getTime()+'_'+Math.random().toString(36).slice(2,6),timestamp:dt.toISOString(),glucose_mgdl:glucose,event_type:evIdx>=0?(cols[evIdx]||null):null,meal_notes:noteIdx>=0?(cols[noteIdx]||null):null,source:'clarity_csv'})}return{readings,error:null}}
 async function cgmUpload(readings){if(!readings.length)return{uploaded:0,error:'No readings'};let uploaded=0;for(let i=0;i<readings.length;i+=500){const chunk=readings.slice(i,i+500);const res=await sbUpsert(CGM_TABLE,chunk,'id');if(res&&res.error)return{uploaded,error:res.error.message};uploaded+=chunk.length}return{uploaded,error:null}}
@@ -2543,7 +2543,7 @@ function buildCgm(){const{readings,importing}=cgmState;const up='<div class="cgm
 function rCgm(){if(!cgmState.loaded)cgmInit();return'<div id="cgm-panel" style="overflow-y:auto;height:100%">'+buildCgm()+'</div>'}
 // == END CGM ==
 
-// == WHOOP WORKOUT ANNOTATIONS + CORRELATION VIEW v0.42 ==
+// == WHOOP WORKOUT ANNOTATIONS + CORRELATION VIEW v0.43 ==
 
 // ── Load WHOOP cycles (strain/workout data) ──
 async function whoopCyclesLoad(days=30){
@@ -2757,116 +2757,90 @@ function rCorr(){
 function streakDenom(c){if(!c||!c.freq)return 7;var f=c.freq.toLowerCase();if(f==="weekly"||f==="1x/wk")return 1;if(f==="daily")return 7;var m=f.match(/^(\d+)/);return m?parseInt(m[1]):7;}
 
 // == OURA RING 4 INTEGRATION ==
-const OURA_PAT_KEY = 'tony3_oura_pat';
+const OURA_SYNC_URL = SB_URL + '/functions/v1/oura-sync';
+const ouraState = {data: null, loaded: false, loading: false, syncing: false};
 
-function ouraGetPAT(){ return localStorage.getItem(OURA_PAT_KEY)||''; }
-function ouraSetPAT(t){ localStorage.setItem(OURA_PAT_KEY,t); }
-
-async function ouraLoad(days=14){
-  const pat = ouraGetPAT();
-  if(!pat) return null;
-  const since = new Date();since.setDate(since.getDate()-days);
-  const sd = since.toISOString().substring(0,10);
-  const ed = new Date().toISOString().substring(0,10);
-  const headers = {'Authorization':'Bearer '+pat};
+async function ouraSync() {
+  if (ouraState.syncing) return;
+  ouraState.syncing = true;
+  rOuraPanelUpdate();
   try {
-    const [readiness,sleep,activity,temp] = await Promise.all([
-      fetch('https://api.ouraring.com/v2/usercollection/daily_readiness?start_date='+sd+'&end_date='+ed,{headers}).then(r=>r.ok?r.json():{data:[]}),
-      fetch('https://api.ouraring.com/v2/usercollection/daily_sleep?start_date='+sd+'&end_date='+ed,{headers}).then(r=>r.ok?r.json():{data:[]}),
-      fetch('https://api.ouraring.com/v2/usercollection/daily_activity?start_date='+sd+'&end_date='+ed,{headers}).then(r=>r.ok?r.json():{data:[]}),
-      fetch('https://api.ouraring.com/v2/usercollection/daily_stress?start_date='+sd+'&end_date='+ed,{headers}).then(r=>r.ok?r.json():{data:[]})
+    const res = await fetch(OURA_SYNC_URL, {method:'POST', headers: sbHeaders()});
+    const j = await res.json();
+    if (j.error) throw new Error(j.error);
+    await ouraLoadFromDB();
+  } catch(e) { alert('Oura sync failed: ' + e.message); }
+  ouraState.syncing = false;
+  rOuraPanelUpdate();
+}
+
+async function ouraLoadFromDB() {
+  ouraState.loading = true;
+  try {
+    const since = new Date(); since.setDate(since.getDate()-30);
+    const sd = since.toISOString().substring(0,10);
+    const [rRes, sRes] = await Promise.all([
+      fetch(SB_URL+'/rest/v1/oura_readiness?date=gte.'+sd+'&order=date.desc&limit=30',{headers:sbHeaders()}),
+      fetch(SB_URL+'/rest/v1/oura_sleep?date=gte.'+sd+'&order=date.desc&limit=30',{headers:sbHeaders()}),
     ]);
-    return {readiness:readiness.data||[],sleep:sleep.data||[],activity:activity.data||[],temp:temp.data||[]};
-  } catch(e){ return null; }
+    ouraState.data = {
+      readiness: rRes.ok ? await rRes.json() : [],
+      sleep: sRes.ok ? await sRes.json() : [],
+    };
+  } catch(e) { ouraState.data = {readiness:[],sleep:[]}; }
+  ouraState.loaded = true;
+  ouraState.loading = false;
 }
 
-const ouraState={data:null,loaded:false,loading:false};
-
-async function ouraInit(){
-  if(ouraState.loading) return;
-  ouraState.loading=true;
-  ouraState.data = await ouraLoad(14);
-  ouraState.loaded=true;
-  ouraState.loading=false;
-  const el=document.getElementById('oura-panel');
-  if(el){el.innerHTML=buildOura();bindOuraEvents();}
+async function ouraInit() {
+  if (ouraState.loading || ouraState.loaded) return;
+  ouraState.loading = true;
+  rOuraPanelUpdate();
+  await ouraLoadFromDB();
+  rOuraPanelUpdate();
 }
 
-function buildOura(){
-  const pat = ouraGetPAT();
-  const connectForm = '<div style="padding:24px;max-width:400px"><div style="font-size:15px;font-weight:600;margin-bottom:8px">Connect Oura Ring</div><div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:16px">Enter your Oura Personal Access Token to sync readiness, sleep, temperature deviation, and activity data.</div><div style="margin-bottom:8px"><input id="oura-pat-input" type="password" value="'+esc(pat)+'" placeholder="Paste your Oura PAT here" style="width:100%;padding:10px 12px;border-radius:8px;border:.5px solid var(--color-border-secondary);background:var(--color-background-secondary);color:var(--color-text-primary);font-size:13px;box-sizing:border-box"></div><div style="display:flex;gap:8px"><button class="cgm-import-btn" onclick="ouraConnect()">Connect</button><a href="https://cloud.ouraring.com/personal-access-tokens" target="_blank" style="font-size:11px;color:var(--tx,#1D9E75);align-self:center">Get PAT -></a></div><div style="font-size:10px;color:var(--color-text-tertiary);margin-top:8px">Token stored locally. Never sent to our servers.</div></div>';
-  
-  if(!pat || !ouraState.loaded) return connectForm + (ouraState.loading ? '<div style="padding:20px;text-align:center;color:var(--color-text-tertiary)">Loading...</div>' : '');
-  if(!ouraState.data) return connectForm + '<div style="padding:20px;text-align:center;color:#E24B4A">Could not connect. Check your PAT.</div>';
-  
-  const {readiness,sleep,activity} = ouraState.data;
-  
-  // Latest readiness
-  const latestR = readiness[readiness.length-1];
-  const latestS = sleep[sleep.length-1];
-  const latestA = activity[activity.length-1];
-  
-  const rScore = latestR?.score ?? '--';
-  const rColor = typeof rScore==='number'?(rScore>=80?'#1D9E75':rScore>=60?'#BA7517':'#E24B4A'):'var(--color-text-secondary)';
+function buildOura() {
+  const {data, loaded, loading, syncing} = ouraState;
+  const readiness = data?.readiness || [];
+  const sleep = data?.sleep || [];
+  const syncBtn = '<button class="cgm-import-btn" onclick="ouraSync()" style="font-size:12px;padding:7px 16px">' + (syncing ? 'Syncing...' : 'Sync now') + '</button>';
+  const subText = readiness.length ? readiness.length + ' days synced' : 'No data yet';
+  const header = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px"><div><div style="font-size:14px;font-weight:600">Oura Ring 4</div><div style="font-size:11px;color:var(--color-text-tertiary)">' + subText + '</div></div>' + syncBtn + '</div>';
+
+  if (!loaded || loading) return '<div style="padding:12px">' + header + '<div class="cgm-empty"><div class="cgm-empty-icon">O</div>Loading Oura data...<br><br><div style="font-size:11px;line-height:1.6">If first sync:<br>1. Supabase Dashboard &rarr; Edge Functions &rarr; Secrets<br>2. Add <strong>OURA_PAT</strong> = your new token<br>3. Click Sync now</div></div></div>';
+
+  if (!readiness.length) return '<div style="padding:12px">' + header + '<div class="cgm-empty"><div class="cgm-empty-icon">O</div>No Oura data yet.<br><br><div style="font-size:11px;line-height:1.6">1. Supabase &rarr; Edge Functions &rarr; Secrets<br>2. Add <strong>OURA_PAT</strong> = your Oura PAT<br>3. Click Sync now above</div></div></div>';
+
+  const latest = readiness[0];
+  const latestS = sleep[0];
+  const rScore = latest?.score ?? '--';
   const sScore = latestS?.score ?? '--';
-  const sColor = typeof sScore==='number'?(sScore>=80?'#1D9E75':sScore>=60?'#BA7517':'#E24B4A'):'var(--color-text-secondary)';
-  const tempDev = latestR?.temperature_deviation;
-  const tempColor = tempDev!==undefined?(Math.abs(tempDev)<0.5?'#1D9E75':Math.abs(tempDev)<1?'#BA7517':'#E24B4A'):'var(--color-text-secondary)';
-  
-  // 14-day readiness sparkline
-  const rHistory = readiness.map(d=>d.score).filter(Boolean);
-  const rAvg = rHistory.length ? Math.round(rHistory.reduce((a,b)=>a+b,0)/rHistory.length) : '--';
-  
-  let h = connectForm;
-  h += '<div style="padding:12px">';
-  
-  // Top stats
-  h += '<div class="cgm-stats-row" style="grid-template-columns:repeat(3,1fr)">';
-  h += '<div class="cgm-stat"><div class="cgm-stat-label">Readiness</div><div class="cgm-stat-value" style="color:'+rColor+'">'+rScore+'</div><div class="cgm-stat-unit">'+latestR?.day||''+'</div></div>';
-  h += '<div class="cgm-stat"><div class="cgm-stat-label">Sleep Score</div><div class="cgm-stat-value" style="color:'+sColor+'">'+sScore+'</div><div class="cgm-stat-unit">'+Math.round((latestS?.total_sleep_duration||0)/3600*10)/10+'h sleep</div></div>';
-  h += '<div class="cgm-stat"><div class="cgm-stat-label">Temp Deviation</div><div class="cgm-stat-value" style="color:'+tempColor+'">'+(tempDev!==undefined?(tempDev>0?'+':'')+tempDev.toFixed(2):'--')+'</div><div class="cgm-stat-unit"> degC from baseline</div></div>';
+  const tempDev = latest?.temperature_deviation;
+  const rColor = typeof rScore==='number'?(rScore>=80?'#1D9E75':rScore>=60?'#BA7517':'#E24B4A'):'var(--color-text-tertiary)';
+  const sColor = typeof sScore==='number'?(sScore>=80?'#1D9E75':sScore>=60?'#BA7517':'#E24B4A'):'var(--color-text-tertiary)';
+  const tColor = tempDev!==undefined?(Math.abs(tempDev)<0.5?'#1D9E75':Math.abs(tempDev)<1.0?'#BA7517':'#E24B4A'):'var(--color-text-tertiary)';
+  const rAvg = readiness.length ? Math.round(readiness.reduce((a,b)=>a+(b.score||0),0)/readiness.length) : '--';
+
+  let h = '<div style="padding:12px">' + header;
+  h += '<div class="cgm-stats-row" style="grid-template-columns:repeat(3,1fr);margin-bottom:14px">';
+  h += '<div class="cgm-stat"><div class="cgm-stat-label">Readiness</div><div class="cgm-stat-value" style="color:'+rColor+'">'+rScore+'</div><div class="cgm-stat-unit">'+latest?.date+'</div></div>';
+  h += '<div class="cgm-stat"><div class="cgm-stat-label">Sleep Score</div><div class="cgm-stat-value" style="color:'+sColor+'">'+sScore+'</div><div class="cgm-stat-unit">'+latestS?.date+'</div></div>';
+  h += '<div class="cgm-stat"><div class="cgm-stat-label">Temp Deviation</div><div class="cgm-stat-value" style="color:'+tColor+'">'+(tempDev!==undefined?(tempDev>0?'+':'')+tempDev.toFixed(2):'--')+'</div><div class="cgm-stat-unit">deg C from baseline</div></div>';
   h += '</div>';
-  
-  // 14-day readiness history table
-  if(readiness.length > 0) {
-    h += '<div class="cgm-chart-wrap"><div class="cgm-header-row"><div class="cgm-chart-title">14-Day Readiness &middot; '+rAvg+'% avg</div><button class="cgm-clear-btn" onclick="ouraState.loaded=false;ouraSetPAT(String());rOuraPanelUpdate()">Disconnect</button></div>';
-    h += '<div>';
-    readiness.slice().reverse().slice(0,14).forEach(d=>{
-      const sc=d.score;
-      const c=sc>=80?'#1D9E75':sc>=60?'#BA7517':'#E24B4A';
-      const tempD=d.temperature_deviation;
-      const tempStr=tempD!==undefined?(' &middot; temp '+(tempD>0?'+':'')+tempD.toFixed(1)+' degC'):'';
-      h+='<div class="cgm-day-row"><span class="cgm-day-date">'+d.day+'</span><span class="cgm-day-avg" style="color:'+c+'">'+sc+'%</span><span class="cgm-day-tir">Readiness</span><span class="cgm-day-range" style="color:'+(tempD!==undefined&&Math.abs(tempD)>0.5?'#BA7517':'var(--color-text-tertiary)')+'">'+tempStr+'</span></div>';
-    });
-    h += '</div></div>';
-  }
-  
-  h += '</div>';
+  h += '<div class="cgm-chart-wrap"><div class="cgm-chart-title">30-Day Readiness &mdash; avg ' + rAvg + '%</div>';
+  readiness.slice(0,30).forEach(d => {
+    const sc=d.score; const c=sc>=80?'#1D9E75':sc>=60?'#BA7517':'#E24B4A';
+    const td=d.temperature_deviation;
+    const tc=td!==undefined?(Math.abs(td)<0.5?'var(--color-text-tertiary)':Math.abs(td)<1?'#BA7517':'#E24B4A'):'var(--color-text-tertiary)';
+    h+='<div class="cgm-day-row"><span class="cgm-day-date">'+d.date+'</span><span class="cgm-day-avg" style="color:'+c+'">'+sc+'%</span><span class="cgm-day-tir">readiness</span><span class="cgm-day-range" style="color:'+tc+'">'+(td!==undefined?(td>0?'+':'')+td.toFixed(2)+' deg C':'--')+'</span></div>';
+  });
+  h += '</div></div>';
   return h;
 }
 
-function bindOuraEvents(){}
-
-function ouraConnect(){
-  const pat = document.getElementById('oura-pat-input')?.value?.trim();
-  if(!pat){alert('Please enter your Oura PAT');return;}
-  ouraSetPAT(pat);
-  ouraState.loaded=false;
-  ouraState.data=null;
-  rOuraPanelUpdate();
-  ouraInit();
-}
-
-function rOuraPanelUpdate(){
-  const el=document.getElementById('oura-panel');
-  if(el){el.innerHTML=buildOura();bindOuraEvents();}
-}
-
-function rOura(){
-  if(!ouraState.loaded&&!ouraState.loading) ouraInit();
-  return '<div id="oura-panel" style="overflow-y:auto;height:100%">'+buildOura()+'</div>';
-}
-// == END OURA ==
-</script>
+function rOuraPanelUpdate() { const el=document.getElementById('oura-panel'); if(el){el.innerHTML=buildOura();} }
+function rOura() { if(!ouraState.loaded&&!ouraState.loading)ouraInit(); return '<div id="oura-panel" style="overflow-y:auto;height:100%">'+buildOura()+'</div>'; }
+// == END OURA ==</script>
 </body>
 </html>
