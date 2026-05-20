@@ -1223,16 +1223,7 @@ function doWithingsSync(){
       alert('Sync error: '+(data.error||JSON.stringify(data)));
       render(false);
     }
-  }).catch(function(e){
-  if(e.message&&(e.message.toLowerCase().includes('refresh')||e.message.toLowerCase().includes('token')||e.message.toLowerCase().includes('invalid'))){
-    if(confirm('Withings connection expired.\nClick OK to reconnect (opens Withings login in new tab).')){
-      window.open('https://rlvvkepcqfzbvgwefjwc.supabase.co/functions/v1/withings-auth','_blank');
-    }
-  } else {
-    alert('Sync failed: '+e.message);
-  }
-  render(false);
-});
+  }).catch(function(e){if(e.message&&(e.message.toLowerCase().includes('refresh')||e.message.toLowerCase().includes('token')||e.message.toLowerCase().includes('invalid'))){if(confirm('Withings connection expired. Click OK to reconnect.')){doWithingsReconnect();}}else{alert('Sync failed: '+e.message);}render(false);});
 }
 
 function kgToLbs(kg){return kg?(kg*2.20462).toFixed(1):null;}
@@ -1245,7 +1236,7 @@ function rWithings(){  var h='<div class="body">';
   h+='<div><div style="font-size:16px;font-weight:600">Withings Body Scan</div>';
   h+='<div style="font-size:11px;color:var(--tx3)">'+(S.withingsConnected?'Connected — '+S.withingsBody.length+' scans synced':'Not connected')+'</div></div>';
   if(S.withingsConnected){
-    h+='<button id="withings-sync-btn" data-a="withings-sync" style="padding:6px 14px;background:var(--bg2);border:.5px solid var(--bd2);color:var(--tx);border-radius:var(--r);font-size:12px;font-weight:500;font-family:var(--sans)">'+icn('refresh')+' Sync now</button><button onclick="window.open('https://rlvvkepcqfzbvgwefjwc.supabase.co/functions/v1/withings-auth','_blank')" style="font-size:11px;padding:5px 10px;background:none;border:.5px solid var(--color-border-secondary);border-radius:6px;color:var(--color-text-tertiary);cursor:pointer;margin-left:6px">Reconnect</button>';
+    h+='<button id="withings-sync-btn" data-a="withings-sync" style="padding:6px 14px;background:var(--bg2);border:.5px solid var(--bd2);color:var(--tx);border-radius:var(--r);font-size:12px;font-weight:500;font-family:var(--sans)">'+icn('refresh')+' Sync now</button><button onclick="doWithingsReconnect()" style="font-size:11px;padding:5px 10px;background:none;border:.5px solid var(--color-border-secondary);border-radius:6px;color:var(--color-text-tertiary);cursor:pointer;margin-left:6px">Reconnect</button>';
   }else{
     h+='<a href="https://rlvvkepcqfzbvgwefjwc.supabase.co/functions/v1/withings-auth" style="padding:6px 14px;background:#000;color:#fff;border:none;border-radius:var(--r);font-size:13px;font-weight:500;font-family:var(--sans);text-decoration:none">Connect Withings</a>';
   }
@@ -2851,6 +2842,8 @@ function buildOura() {
 
 function rOuraPanelUpdate() { const el=document.getElementById('oura-panel'); if(el){el.innerHTML=buildOura();} }
 function rOura() { if(!ouraState.loaded&&!ouraState.loading)ouraInit(); return '<div id="oura-panel" style="overflow-y:auto;height:100%">'+buildOura()+'</div>'; }
-// == END OURA ==</script>
+// == END OURA ==
+function doWithingsReconnect(){window.open('https://rlvvkepcqfzbvgwefjwc.supabase.co/functions/v1/withings-auth','_blank');}
+</script>
 </body>
 </html>
