@@ -1223,7 +1223,16 @@ function doWithingsSync(){
       alert('Sync error: '+(data.error||JSON.stringify(data)));
       render(false);
     }
-  }).catch(function(e){if(e.message&&(e.message.toLowerCase().includes('refresh')||e.message.toLowerCase().includes('token')||e.message.toLowerCase().includes('invalid'))){if(confirm('Withings connection expired. Click OK to reconnect.')){doWithingsReconnect();}}else{alert('Sync failed: '+e.message);}render(false);});
+  }).catch(function(e){
+  if(e.message&&(e.message.toLowerCase().includes('refresh')||e.message.toLowerCase().includes('token')||e.message.toLowerCase().includes('invalid'))){
+    if(confirm('Withings connection expired.\nClick OK to reconnect (opens Withings login in new tab).')){
+      doWithingsReconnect();
+    }
+  } else {
+    alert('Sync failed: '+e.message);
+  }
+  render(false);
+});
 }
 
 function kgToLbs(kg){return kg?(kg*2.20462).toFixed(1):null;}
@@ -2843,7 +2852,7 @@ function buildOura() {
 function rOuraPanelUpdate() { const el=document.getElementById('oura-panel'); if(el){el.innerHTML=buildOura();} }
 function rOura() { if(!ouraState.loaded&&!ouraState.loading)ouraInit(); return '<div id="oura-panel" style="overflow-y:auto;height:100%">'+buildOura()+'</div>'; }
 // == END OURA ==
-function doWithingsReconnect(){window.open('https://rlvvkepcqfzbvgwefjwc.supabase.co/functions/v1/withings-auth','_blank');}
+function doWithingsReconnect(){window.open("https://rlvvkepcqfzbvgwefjwc.supabase.co/functions/v1/withings-auth","_blank");}
 </script>
 </body>
 </html>
