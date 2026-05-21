@@ -201,7 +201,7 @@ textarea{resize:none}
   .desktop-right-inner{display:none!important}
 }
 
-/* ── CGM TAB v0.52 ── */
+/* ── CGM TAB v0.53 ── */
 .cgm-upload-zone{border:1.5px dashed var(--color-border-secondary);border-radius:12px;padding:28px 20px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s;margin-bottom:16px}
 .cgm-upload-zone:hover,.cgm-upload-zone.drag-over{border-color:var(--tx);background:rgba(29,158,117,.06)}
 .cgm-upload-zone input[type=file]{display:none}
@@ -1921,7 +1921,7 @@ function rHdr(){
   var syncDot=online?'<span style="width:6px;height:6px;border-radius:50%;background:var(--tx-ok);display:inline-block;margin-left:4px" title="Synced"></span>':'<span style="width:6px;height:6px;border-radius:50%;background:var(--tx-warn);display:inline-block;margin-left:4px" title="Offline - will sync when connected"></span>';
   return '<div class="hdr"><div class="hdr-left">'
     +'<span class="hdr-brand">Tony<span style="color:var(--tx-info);font-weight:700">\u00b3</span>'+syncDot+'</span>'
-    +'<span class="hdr-tag">T<span style="color:var(--tx-info);font-weight:700;font-size:17px">\u00b3</span> \u2014 longevity, performance, cognition <span style="font-size:10px;color:var(--tx3);font-family:var(--mono)">v0.52</span></span>'
+    +'<span class="hdr-tag">T<span style="color:var(--tx-info);font-weight:700;font-size:17px">\u00b3</span> \u2014 longevity, performance, cognition <span style="font-size:10px;color:var(--tx3);font-family:var(--mono)">v0.53</span></span>'
     +'</div>'+b+'</div>';
 }
 function rTabs(){
@@ -2533,11 +2533,11 @@ var LAB_DRAWS_SEED = [{"id": "lab_mar18_t", "draw_date": "2026-03-18", "draw_lab
 
 load();
 
-// == CGM v0.52 ==
+// == CGM v0.53 ==
 const CGM_TABLE='cgm_readings';
 function parseClarityCsv(text){const lines=text.split('\n').filter(l=>l.trim());const readings=[];let headerIdx=-1,headers=[];for(let i=0;i<Math.min(lines.length,20);i++){const cols=lines[i].split(',').map(c=>c.trim().replace(/"/g,''));if(cols.some(c=>c.toLowerCase().includes('timestamp')||c.toLowerCase()==='time')){headerIdx=i;headers=cols.map(c=>c.toLowerCase());break}}if(headerIdx<0)return{readings,error:'No header'};const tsIdx=headers.findIndex(h=>h.includes('timestamp')||h==='time');const glIdx=headers.findIndex(h=>h.includes('glucose')&&h.includes('mg'));if(tsIdx<0||glIdx<0)return{readings,error:'Missing columns'};const evIdx=headers.findIndex(h=>h.includes('event type'));const noteIdx=headers.findIndex(h=>h.includes('source')||h.includes('note'));for(let i=headerIdx+1;i<lines.length;i++){const cols=lines[i].split(',').map(c=>c.trim().replace(/"/g,''));if(!cols[tsIdx]||!cols[glIdx])continue;const glucose=parseFloat(cols[glIdx]);if(isNaN(glucose)||glucose<=0||glucose>600)continue;const dt=new Date(cols[tsIdx]);if(isNaN(dt.getTime()))continue;readings.push({id:'cgm_'+dt.getTime()+'_'+Math.random().toString(36).slice(2,6),timestamp:dt.toISOString(),glucose_mgdl:glucose,event_type:evIdx>=0?(cols[evIdx]||null):null,meal_notes:noteIdx>=0?(cols[noteIdx]||null):null,source:'clarity_csv'})}return{readings,error:null}}
 async function cgmUpload(readings){if(!readings.length)return{uploaded:0,error:'No readings'};let uploaded=0;for(let i=0;i<readings.length;i+=500){const chunk=readings.slice(i,i+500);const res=await sbUpsert(CGM_TABLE,chunk,'id');if(res&&res.error)return{uploaded,error:res.error.message};uploaded+=chunk.length}return{uploaded,error:null}}
-async function cgmLoad(days=30){const since=new Date();since.setDate(since.getDate()-days);try{const r=await fetch(SB_URL+'/rest/v1/'+CGM_TABLE+'?timestamp=gte.'+encodeURIComponent(since.toISOString())+'&order=timestamp.asc&limit=5000',{headers:sbHeaders()});if(!r.ok)return[];return await r.json()}catch(e){return[]}}
+async function cgmLoad(days=30){const since=new Date();since.setDate(since.getDate()-days);try{const r=await fetch(SB_URL+'/rest/v1/'+CGM_TABLE+'?timestamp=gte.'+encodeURIComponent(since.toISOString())+'&order=timestamp.desc&limit=5000',{headers:sbHeaders()});if(!r.ok)return[];return await r.json()}catch(e){return[]}}
 function cgmStats(readings){if(!readings.length)return null;const vals=readings.map(r=>r.glucose_mgdl);const avg=vals.reduce((a,b)=>a+b,0)/vals.length;const sd=Math.sqrt(vals.reduce((a,b)=>a+Math.pow(b-avg,2),0)/vals.length);const n=vals.length;const pct=v=>((v/n)*100).toFixed(0);return{avg:Math.round(avg),min:Math.min(...vals),max:Math.max(...vals),sd:Math.round(sd),cv:(sd/avg*100).toFixed(1),gmi:(3.31+0.02392*avg).toFixed(1),tir:{vhigh:pct(vals.filter(v=>v>180).length),high:pct(vals.filter(v=>v>140&&v<=180).length),inRange:pct(vals.filter(v=>v>=70&&v<=140).length),low:pct(vals.filter(v=>v>=54&&v<70).length),vlow:pct(vals.filter(v=>v<54).length)},count:n}}
 function cgmByDay(readings){const days={};readings.forEach(r=>{const d=r.timestamp.substring(0,10);if(!days[d])days[d]=[];days[d].push(r.glucose_mgdl)});return Object.entries(days).sort((a,b)=>b[0].localeCompare(a[0])).map(([date,vals])=>({date,avg:Math.round(vals.reduce((a,b)=>a+b,0)/vals.length),tir:Math.round(vals.filter(v=>v>=70&&v<=140).length/vals.length*100),min:Math.min(...vals),max:Math.max(...vals),count:vals.length}))}
 function cgmSparkline(readings,w=500,h=60){if(!readings.length)return'';const lo=40,hi=300;const pts=readings.map(r=>{const ts=new Date(r.timestamp);const x=((ts.getHours()*60+ts.getMinutes())/1440*w).toFixed(1);const y=Math.max(0,Math.min(h,h-((r.glucose_mgdl-lo)/(hi-lo)*h))).toFixed(1);return x+','+y}).join(' ');const yL=h-((70-lo)/(hi-lo)*h),yH=h-((140-lo)/(hi-lo)*h),yVH=h-((180-lo)/(hi-lo)*h);return'<svg class="cgm-svg" viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none"><rect x="0" y="'+yH.toFixed(1)+'" width="'+w+'" height="'+(yL-yH).toFixed(1)+'" fill="rgba(29,158,117,.08)"/><line x1="0" y1="'+yH.toFixed(1)+'" x2="'+w+'" y2="'+yH.toFixed(1)+'" stroke="#BA7517" stroke-width=".5" stroke-dasharray="3,3" opacity=".5"/><line x1="0" y1="'+yL.toFixed(1)+'" x2="'+w+'" y2="'+yL.toFixed(1)+'" stroke="#378ADD" stroke-width=".5" stroke-dasharray="3,3" opacity=".5"/><line x1="0" y1="'+yVH.toFixed(1)+'" x2="'+w+'" y2="'+yVH.toFixed(1)+'" stroke="#E24B4A" stroke-width=".5" stroke-dasharray="3,3" opacity=".3"/><polyline points="'+pts+'" fill="none" stroke="#1D9E75" stroke-width="1.5" stroke-linejoin="round"/></svg>'}
@@ -2553,7 +2553,7 @@ function buildCgm(){const{readings,importing}=cgmState;const up='<div class="cgm
 function rCgm(){if(!cgmState.loaded)cgmInit();return'<div id="cgm-panel" style="overflow-y:auto;height:100%">'+buildCgm()+'</div>'}
 // == END CGM ==
 
-// == WHOOP WORKOUT ANNOTATIONS + CORRELATION VIEW v0.52 ==
+// == WHOOP WORKOUT ANNOTATIONS + CORRELATION VIEW v0.53 ==
 
 // ── Load WHOOP cycles (strain/workout data) ──
 async function whoopCyclesLoad(days=30){
