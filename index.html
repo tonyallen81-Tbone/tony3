@@ -722,7 +722,7 @@ function tpill(proto){var t=TIER_LABELS[proto];return t?'<span class="tier-pill"
 function eGrid(type,pre){
   var v=pre||(type==='yest'?_ey:_ec);
   var h='<div class="e-row" data-eg="'+type+'">';
-  for(var n=1;n<=10;n++)h+='<div class="e-btn'+(v&&n<=v?' sel':'')+'" data-n="'+n+'">'+n+'</div>';
+  for(var n=1;n<=10;n++)h+='<button class="e-btn'+(v&&n<=v?' sel':'')+'" data-a="pick-e" data-eg="'+type+'" data-n="'+n+'">'+n+'</button>';
   return h+'</div>';
 }
 
@@ -2375,6 +2375,7 @@ function onClick(e){
   else if(a==='same-all'){doSameAll();}
   else if(a==='fresh-start'){doFreshStart();}
   else if(a==='open-vitals'){var tv=S.vitals.filter(function(v){return v.date===TODAY.str;});if(tv.length){_ey=tv[0].energyYest;_ec=tv[0].energyCurrent;}S.vitalsOpen=true;render(true);}
+  else if(a==='pick-e'){var val=+el.dataset.n,type=el.dataset.eg;if(type==='yest')_ey=val;else _ec=val;el.closest('[data-eg]').querySelectorAll('.e-btn').forEach(function(x){x.classList.toggle('sel',+x.dataset.n<=val);});return;}
   else if(a==='save-vitals'){doSaveVitals();}
   else if(a==='open-cpd-edit'){S.editCpd=cid;render(false);}
   else if(a==='back-cpd'){S.editCpd=null;if(S.prevTab)S.tab=S.prevTab;render(false);}
