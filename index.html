@@ -255,6 +255,24 @@ textarea{resize:none}
 .apol1-flag-body{flex:1}
 .apol1-flag-title{font-size:11px;font-weight:600;color:#E24B4A;margin-bottom:2px}
 .apol1-flag-text{font-size:10px;color:var(--color-text-secondary);line-height:1.4}
+
+.cl-card{background:var(--bg2);border:.5px solid var(--bd);border-radius:var(--rl);margin-bottom:.625rem;overflow:hidden}
+.cl-hdr{display:flex;align-items:center;justify-content:space-between;padding:.625rem .875rem;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.cl-hdr-left{display:flex;align-items:center;gap:.4rem;font-size:12px;font-weight:600;color:var(--tx2)}
+.cl-hdr-right{display:flex;align-items:center;gap:.4rem}
+.cl-prog{font-size:11px;font-family:var(--mono);color:var(--tx-info)}
+.cl-prog.done{color:var(--tx-ok)}
+.cl-chevron{font-size:14px;color:var(--tx3);transition:transform .2s}
+.cl-chevron.open{transform:rotate(180deg)}
+.cl-body{padding:0 .5rem .5rem}
+.cl-item{display:flex;align-items:center;gap:.5rem;padding:.4rem .25rem;border-bottom:.5px solid var(--bd)}
+.cl-item:last-child{border-bottom:none}
+.cl-chk{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--bd2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;color:transparent;background:none;padding:0;transition:background .12s,border-color .12s;-webkit-tap-highlight-color:transparent}
+.cl-chk.on{background:var(--tx-ok);border-color:var(--tx-ok);color:#fff}
+.cl-chk:active{transform:scale(.88)}
+.cl-nm{flex:1;font-size:13px;color:var(--tx)}
+.cl-nm.done{color:var(--tx3);text-decoration:line-through}
+.cl-dose{font-size:11px;color:var(--tx3);font-family:var(--mono);flex-shrink:0}
 </style>
 </head>
 <body>
@@ -303,6 +321,11 @@ var PMETA={
   'Optional Stack': {color:'#7C3AED',ic:'sparkles'},
 };
 var PORDER=['Hormonal Stack','Peptide Stack','Foundation','Tier 1 Stack','Tier 2 Stack','Tier 3 Stack','Tier 3.5 Stack','Optional Stack'];
+var CL_MORNING_IDS=['c15','c16','c17','c18','c12','c21','c22','c23','c24','c13'];
+var CL_MORNING_SPLITS=[['c20','s20a']];
+var CL_EVENING_IDS=['c19','c8','c14'];
+var CL_EVENING_SPLITS=[['c20','s20b'],['c9','s9c']];
+var CL_OPEN={morning:true,evening:false};
 var PMLIST=[
   {name:'Hormonal Stack',  status:'ACTIVE',   start:'2026-01-01',note:'TRT 100mg/wk + HCG 3x/wk + Semaglutide 10 IU/wk. E2 normalized April 10, stable at 37.2.'},
   {name:'Peptide Stack',   status:'ACTIVE',   start:'2026-03-01',note:'CJC-1295/Ipamorelin pre-bed. Peptide Blend (BPC-157 + TB-500 + GHK-Cu) pending dosing.'},
@@ -1930,6 +1953,54 @@ function rTabs(){
 }
 function rContent(){if(S.tab==='today')return rToday();if(S.tab==='history')return rHistory();if(S.tab==='compounds')return rCompounds();if(S.tab==='labs')return rLabs();if(S.tab==='whoop')return rWhoop();if(S.tab==='withings')return rWithings();if(S.tab==='journal')return rJournal();if(S.tab==='cgm')return rCgm();if(S.tab==='corr')return rCorr();if(S.tab==='oura')return rOura();return rProtocols();}
 
+
+function rChecklist(type){
+  var ids=type==='morning'?CL_MORNING_IDS:CL_EVENING_IDS;
+  var splits=type==='morning'?CL_MORNING_SPLITS:CL_EVENING_SPLITS;
+  var items=[];
+  ids.forEach(function(cid){
+    var c=S.cpds.find(function(x){return x.id===cid;});
+    if(!c||c.status==='DISCONTINUED')return;
+    var done=doneCheck(cid,null);
+    items.push({cid:cid,sid:null,name:c.name,dose:c.dose!=null?c.dose+c.unit:'',done:done,upcoming:c.status==='UPCOMING'});
+  });
+  splits.forEach(function(pair){
+    var cid=pair[0],sid=pair[1];
+    var c=S.cpds.find(function(x){return x.id===cid;});
+    if(!c||c.status==='DISCONTINUED')return;
+    var sp=c.splits?c.splits.find(function(s){return s.sid===sid;}):null;
+    if(!sp)return;
+    var done=doneCheck(cid,sid);
+    items.push({cid:cid,sid:sid,name:c.name+' ('+sp.label+')',dose:sp.dose+sp.unit,done:done,upcoming:c.status==='UPCOMING'});
+  });
+  var doneCount=items.filter(function(i){return i.done;}).length;
+  var total=items.length;
+  var allDone=doneCount===total&&total>0;
+  var isOpen=CL_OPEN[type];
+  var label=type==='morning'?'Morning supplements':'Evening supplements';
+  var h='<div class="cl-card">';
+  h+='<div class="cl-hdr" data-a="cl-toggle" data-cl="'+type+'">';
+  h+='<span class="cl-hdr-left">'+label+'</span>';
+  h+='<span class="cl-hdr-right">';
+  h+='<span class="cl-prog'+(allDone?' done':'')+'">'+doneCount+'/'+total+'</span>';
+  h+='<i class="ti ti-chevron-down cl-chevron'+(isOpen?' open':'')+'" aria-hidden="true"></i>';
+  h+='</span></div>';
+  if(isOpen){
+    h+='<div class="cl-body">';
+    items.forEach(function(item){
+      var saved=isSaved(TODAY.str);
+      var canToggle=!saved||(saved&&item.done);
+      h+='<div class="cl-item">';
+      h+='<button class="cl-chk'+(item.done?' on':'')+'"'+(saved&&!item.done?' disabled style="opacity:.35;cursor:default"':'')+' data-a="'+(canToggle?'toggle':'noop')+'" data-id="'+item.cid+'" data-sid="'+(item.sid||'')+'">'+(item.done?'<i class="ti ti-check" aria-hidden="true"></i>':'')+'</button>';
+      h+='<span class="cl-nm'+(item.done?' done':'')+'">'+esc(item.name)+'</span>';
+      h+='<span class="cl-dose">'+item.dose+'</span>';
+      h+='</div>';
+    });
+    h+='</div>';
+  }
+  h+='</div>';
+  return h;
+}
 function rToday(){
   var act=S.cpds.filter(function(c){return c.status==='ACTIVE';});
   var total=0,done=0;
@@ -1951,11 +2022,19 @@ function rToday(){
       +'<div class="sy-btns"><button class="sy-yes" data-a="same-all">Yes, copy all</button><button class="sy-no" data-a="fresh-start">No, log fresh</button></div></div>';
   }
   html+=rVitals();
+  html+=rChecklist('morning');
+  html+=rChecklist('evening');
   PORDER.forEach(function(p){
     if(!grps[p])return;
     var m=PMETA[p];
     html+='<div class="sec-hdr"><div class="sec-dot" style="background:'+m.color+'"></div>'+icn(m.ic)+' '+p+'</div>';
-    grps[p].forEach(function(c){html+=dRow(c);});
+    grps[p].forEach(function(c){
+      var inCL=CL_MORNING_IDS.indexOf(c.id)>-1||CL_EVENING_IDS.indexOf(c.id)>-1;
+      if(inCL)return;
+      var clSids=CL_MORNING_SPLITS.concat(CL_EVENING_SPLITS).filter(function(p){return p[0]===c.id;}).map(function(p){return p[1];});
+      if(clSids.length&&c.splits){var rem=c.splits.filter(function(s){return clSids.indexOf(s.sid)===-1;});if(rem.length===0)return;html+=dRow(Object.assign({},c,{splits:rem}));return;}
+      html+=dRow(c);
+    });
   });
   var saved=isSaved(TODAY.str);
   if(saved){
@@ -2374,6 +2453,7 @@ function onClick(e){
   else if(a==='same-split'){doSameOne(cid,sid);}
   else if(a==='same-all'){doSameAll();}
   else if(a==='fresh-start'){doFreshStart();}
+  else if(a==='cl-toggle'){CL_OPEN[el.dataset.cl]=!CL_OPEN[el.dataset.cl];render(true);}
   else if(a==='open-vitals'){var tv=S.vitals.filter(function(v){return v.date===TODAY.str;});if(tv.length){_ey=tv[0].energyYest;_ec=tv[0].energyCurrent;}S.vitalsOpen=true;render(true);}
   else if(a==='pick-e'){var val=+el.dataset.n,type=el.dataset.eg;if(type==='yest')_ey=val;else _ec=val;el.closest('[data-eg]').querySelectorAll('.e-btn').forEach(function(x){x.classList.toggle('sel',+x.dataset.n<=val);});return;}
   else if(a==='save-vitals'){doSaveVitals();}
