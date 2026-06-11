@@ -34,12 +34,12 @@ serve(async (req) => {
     const since = String(Math.floor(Date.now() / 1000) - 90 * 86400)
 
     // 1. Body + segmental + nerve
-    const measParams = new URLSearchParams({ action: 'getmeas', category: '1', lastupdate: since, meastype: '1,6,8,5,76,88,77,170,91,168,174,175,176,177,178,183,184,185,186,187,135,136' })
+    const measParams = new URLSearchParams({ action: 'getmeas', category: '1', lastupdate: since, meastype: '1,6,8,5,76,88,77,170,91,168,174,175,176,177,178,183,184,185,186,187,135,136,80,171' })
     const measJson = await (await fetch('https://wbsapi.withings.net/measure?' + measParams, { headers: auth })).json()
     if (measJson.status === 0 && measJson.body?.measuregrps?.length) {
       const byDate = {}
       for (const g of measJson.body.measuregrps) { const d = new Date(g.date * 1000).toISOString().substring(0,10); if (!byDate[d]) byDate[d] = []; byDate[d].push(g) }
-      await supabase.from('withings_body').upsert(Object.entries(byDate).map(([date, groups]) => ({ id: `body_${date}`, date, weight_kg: extractMeas(groups,1), fat_mass_kg: extractMeas(groups,8), muscle_mass_kg: extractMeas(groups,76), bone_mass_kg: extractMeas(groups,88), visceral_fat: extractMeas(groups,170), fat_trunk: extractMeas(groups,174), fat_arm_left: extractMeas(groups,175), fat_arm_right: extractMeas(groups,176), fat_leg_left: extractMeas(groups,177), fat_leg_right: extractMeas(groups,178), muscle_trunk: extractMeas(groups,183), muscle_arm_left: extractMeas(groups,184), muscle_arm_right: extractMeas(groups,185), muscle_leg_left: extractMeas(groups,186), muscle_leg_right: extractMeas(groups,187), nerve_score_left: extractMeas(groups,135), nerve_score_right: extractMeas(groups,136) })), { onConflict: 'id' })
+      await supabase.from('withings_body').upsert(Object.entries(byDate).map(([date, groups]) => ({ id: `body_${date}`, date, weight_kg: extractMeas(groups,1), fat_mass_kg: extractMeas(groups,8), muscle_mass_kg: extractMeas(groups,76), bone_mass_kg: extractMeas(groups,88), visceral_fat: extractMeas(groups,170), fat_trunk: extractMeas(groups,174), fat_arm_left: extractMeas(groups,175), fat_arm_right: extractMeas(groups,176), fat_leg_left: extractMeas(groups,177), fat_leg_right: extractMeas(groups,178), muscle_trunk: extractMeas(groups,183), muscle_arm_left: extractMeas(groups,184), muscle_arm_right: extractMeas(groups,185), muscle_leg_left: extractMeas(groups,186), muscle_leg_right: extractMeas(groups,187), nerve_score_left: extractMeas(groups,135), nerve_score_right: extractMeas(groups,136), bmr: extractMeas(groups,80), metabolic_age: extractMeas(groups,171) })), { onConflict: 'id' })
       const vascRows = Object.entries(byDate).map(([date, groups]) => ({ id: `vasc_${date}`, date, pwv: extractMeas(groups,91), vascular_age: extractMeas(groups,168) })).filter(r => r.pwv || r.vascular_age)
       if (vascRows.length) await supabase.from('withings_vascular').upsert(vascRows, { onConflict: 'id' })
     }
