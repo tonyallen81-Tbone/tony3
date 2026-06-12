@@ -36,9 +36,9 @@ serve(async (req) => {
     // 1. Body + segmental + nerve
     const measParams = new URLSearchParams({ action: 'getmeas', category: '1', lastupdate: since, meastype: '1,6,8,5,76,88,77,170,91,168,174,175,176,177,178,183,184,185,186,187,135,136,80,171' })
     const measJson = await (await fetch('https://wbsapi.withings.net/measure?' + measParams, { headers: auth })).json()
+    const allTypes = new Set()
     // DEBUG: log all measure types
     if (measJson.status === 0) {
-      const allTypes = new Set()
       ;(measJson.body?.measuregrps || []).forEach(g => g.measures.forEach(m => allTypes.add(m.type)))
       console.log('WITHINGS_MEASTYPE_DEBUG:', JSON.stringify([...allTypes].sort((a,b)=>a-b)))
     }
@@ -69,7 +69,7 @@ serve(async (req) => {
       if (ecgRows.length) await supabase.from('withings_ecg').upsert(ecgRows, { onConflict: 'id' })
     }
 
-    return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    return new Response(JSON.stringify({ ok: true, debug_types: [...allTypes].sort((a,b)=>a-b) }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   } catch (e) {
     return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   }
