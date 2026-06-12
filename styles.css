@@ -185,6 +185,8 @@ textarea{resize:none}
   .desktop-layout{display:block}
   .desktop-left,.desktop-right{all:unset;display:block}
   .desktop-nav,.desk-tab,.data-table,.export-panel,.streak-grid,.vit-trend-row{display:none!important}
+  .lab-cat-btn{display:inline-block!important;padding:6px 14px;margin:0 6px 8px 0;border-radius:20px;border:.5px solid var(--bd2);font-size:13px;font-weight:500;background:none;color:var(--tx2);font-family:var(--sans)}
+  .lab-cat-btn.on{background:var(--tx-info);color:#fff;border-color:var(--tx-info)}
   .desktop-right-inner{display:none!important}
 }
 

@@ -756,7 +756,7 @@ function rLabs(){
   h+='<div style="font-size:13px;font-weight:600;margin-bottom:.5rem">Detail by category</div>';
   h+='<div style="display:flex;gap:.375rem;flex-wrap:wrap;margin-bottom:.875rem">';
   labCats2.forEach(function(cat){
-    h+='<button class="desk-tab'+(S.labCat===cat?' on':'')+'" data-a="lab-cat" data-v="'+cat+'">'+cat+'</button>';
+    h+='<button class="desk-tab lab-cat-btn'+(S.labCat===cat?' on':'')+'" data-a="lab-cat" data-v="'+cat+'">'+cat+'</button>';
   });
   h+='</div>';
 
