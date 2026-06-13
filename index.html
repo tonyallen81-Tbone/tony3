@@ -21,6 +21,7 @@
 <script src="oura.js"></script>
 <script src="whoop.js"></script>
 <script src="withings.js"></script>
+<script src="substance.js"></script>
 <script src="utils.js"></script>
 <script>
 // ââ Generate blue home screen icon âââââââââââââââââââââââââââââââââââââââââ
@@ -115,7 +116,7 @@ var SEED=[
 ];
 
 // ââ State âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
-var S={cpds:[],logs:[],vitals:[],labResults:[],journal:[],whoopRecovery:[],whoopSleep:[],whoopCycles:[],whoopWorkouts:[],whoopConnected:false,withingsBody:[],withingsBP:[],withingsVascular:[],withingsConnected:false,tab:'today',deskTab:'dashboard',labCat:'Hormonal',labDetail:null,logging:null,editCpd:null,addingLab:false,logPast:false,addingJournal:false,editJournalId:null,prevTab:null,freshStart:false,vitalsOpen:false,loaded:false,savedDays:[],histDate:null};
+var S={cpds:[],logs:[],vitals:[],labResults:[],journal:[],whoopRecovery:[],whoopSleep:[],whoopCycles:[],whoopWorkouts:[],whoopConnected:false,withingsBody:[],withingsBP:[],withingsVascular:[],withingsConnected:false,tab:'today',deskTab:'dashboard',labCat:'Hormonal',labDetail:null,logging:null,editCpd:null,addingLab:false,logPast:false,addingJournal:false,editJournalId:null,prevTab:null,freshStart:false,vitalsOpen:false,addingSubstance:false,loaded:false,savedDays:[],histDate:null};
 var _ey=null,_ec=null;
 
 // ââ Date helpers ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
@@ -161,6 +162,7 @@ function load(){
   var p4=sbGet('compound_overrides','select=*').catch(function(){return [];});
   var p5=sbGet('lab_results','select=*&order=draw_date.asc').catch(function(){return [];});
   var p6=sbGet('journal_entries','select=*&order=entry_date.desc').catch(function(){return [];});
+  loadSubstances().then(function(){if(S.tab==='today')render(false);});
   var p7=sbGet('whoop_tokens','select=id,updated_at').catch(function(){return [];});
   var p8=sbGet('whoop_recovery','select=*&order=created_at.desc&limit=90').catch(function(){return [];});
   var p9=sbGet('whoop_sleep','select=*&order=start_time.desc&limit=90').catch(function(){return [];});
@@ -491,14 +493,18 @@ window.goBack=goBack;window.goBackCpd=goBackCpd;window.goBackPast=goBackPast;win
 function render(preserveScroll){
   var el=document.getElementById('app');
   if(!S.loaded){el.innerHTML='<div style="padding:3rem;text-align:center;color:#9ca3af;font-family:system-ui">Loading Tony\u00b3...</div>';return;}
-  var sy=preserveScroll?window.scrollY:0;
+  var sy=window.scrollY;
+  var leftEl=document.querySelector('.desktop-left');
+  var leftScroll=leftEl?leftEl.scrollTop:0;
   if(S.addingJournal||S.editJournalId)el.innerHTML=rJournal();
   else if(S.logging)el.innerHTML=rLogForm();
   else if(S.editCpd)el.innerHTML=rCpdEditForm();
   else if(S.logPast)el.innerHTML=rLogPastForm();
   else el.innerHTML=rHdr()+rTabs()+rDesktopLayout();
   bind();
-  if(preserveScroll)requestAnimationFrame(function(){window.scrollTo(0,sy);});
+  var nl=document.querySelector('.desktop-left');
+  if(nl)nl.scrollTop=leftScroll;
+  requestAnimationFrame(function(){window.scrollTo(0,sy);});
 }
 
 
@@ -1203,7 +1209,7 @@ function rHdr(){
   var syncDot=online?'<span style="width:6px;height:6px;border-radius:50%;background:var(--tx-ok);display:inline-block;margin-left:4px" title="Synced"></span>':'<span style="width:6px;height:6px;border-radius:50%;background:var(--tx-warn);display:inline-block;margin-left:4px" title="Offline - will sync when connected"></span>';
   return '<div class="hdr"><div class="hdr-left">'
     +'<span class="hdr-brand">Tony<span style="color:var(--tx-info);font-weight:700">\u00b3</span>'+syncDot+'</span>'
-    +'<span class="hdr-tag">T<span style="color:var(--tx-info);font-weight:700;font-size:17px">\u00b3</span> \u2014 longevity, performance, cognition <span style="font-size:10px;color:var(--tx3);font-family:var(--mono)">v0.57</span></span>'
+    +'<span class="hdr-tag">T<span style="color:var(--tx-info);font-weight:700;font-size:17px">\u00b3</span> \u2014 longevity, performance, cognition <span style="font-size:10px;color:var(--tx3);font-family:var(--mono)">v0.58</span></span>'
     +'</div>'+b+'</div>';
 }
 function rTabs(){
@@ -1283,6 +1289,7 @@ function rToday(){
   html+=rVitals();
   html+=rChecklist('morning');
   html+=rChecklist('evening');
+  html+=rSubstanceCard();
   PORDER.forEach(function(p){
     if(!grps[p])return;
     var m=PMETA[p];
@@ -1698,6 +1705,10 @@ function onClick(e){
   else if(a==='save-journal'){doSaveJournal();}
   else if(a==='edit-journal'){S.editJournalId=el.dataset.jid;S.addingJournal=false;S.prevTab=S.tab;render(false);}
   else if(a==='delete-journal'){if(confirm('Delete this journal entry?')){S.journal=S.journal.filter(function(j){return j.id!==el.dataset.jid;});deleteJournal(el.dataset.jid);save();render(false);}}
+  else if(a==='add-substance'){S.addingSubstance=true;render(false);}
+  else if(a==='cancel-substance'){S.addingSubstance=false;render(false);}
+  else if(a==='save-substance'){doSaveSubstance();}
+  else if(a==='delete-substance'){doDeleteSubstance(el.dataset.subid);}
   else if(a==='whoop-sync'){doWhoopSync();}
   else if(a==='withings-sync'){doWithingsSync();}
   else if(a==='cgm-sync'){doCGMSync();}
