@@ -65,8 +65,8 @@ var PMETA={
   'Optional Stack': {color:'#7C3AED',ic:'sparkles'},
 };
 var PORDER=['Hormonal Stack','Peptide Stack','Foundation','Tier 1 Stack','Tier 2 Stack','Tier 3 Stack','Tier 3.5 Stack','Optional Stack'];
-var CL_MORNING_IDS=['c15','c16','c17','c18','c12','c21','c22','c23','c24','c13','c8'];
-var CL_MORNING_SPLITS=[['c20','s20a']];
+var CL_MORNING_IDS=['c15','c16','c17','c18','c12','c21','c22','c23','c24','c13','c8','c7','c10','c11'];
+var CL_MORNING_SPLITS=[['c20','s20a'],['c9','s9a'],['c9','s9b']];
 var CL_EVENING_IDS=['c19','c14'];
 var CL_EVENING_SPLITS=[['c20','s20b'],['c9','s9c']];
 var CL_OPEN={morning:true,evening:false};
@@ -374,7 +374,7 @@ function doToggle(cid,sid){
     if(!c)return;
     var split=sid&&c.splits?c.splits.find(function(s){return s.sid===sid;}):null;
     var entry={
-      id:'l'+Date.now(),date:TODAY.str,time:DEFAULT_TIME,
+      id:'l'+Date.now(),date:TODAY.str,time:nowTime(),
       cid:c.id,sid:sid||null,nm:c.name,label:split?split.label:null,
       proto:c.protocol,dose:split?split.dose:c.dose,unit:split?split.unit:c.unit,
       route:c.route,notes:'',missed:false,quick:true
@@ -403,14 +403,14 @@ function doLog(data){
 
 function doSameOne(cid,sid){
   var yl=ylogFor(cid,sid);if(!yl)return;
-  S.logs=[Object.assign({},yl,{id:'l'+Date.now(),date:TODAY.str,time:DEFAULT_TIME,copied:true})].concat(S.logs);
+  S.logs=[Object.assign({},yl,{id:'l'+Date.now(),date:TODAY.str,time:nowTime(),copied:true})].concat(S.logs);
   save();
   pushLog(S.logs[0]);
   render(true);
 }
 function doSameAll(){
   var yl=ylogs();if(!yl.length)return;
-  S.logs=yl.map(function(l){return Object.assign({},l,{id:'l'+Date.now()+(Math.random()*1e6|0),date:TODAY.str,time:DEFAULT_TIME,copied:true});}).concat(S.logs);
+  S.logs=yl.map(function(l){return Object.assign({},l,{id:'l'+Date.now()+(Math.random()*1e6|0),date:TODAY.str,time:nowTime(),copied:true});}).concat(S.logs);
   S.freshStart=true;save();
   pushLogs(S.logs.slice(0,yl.length));
   render(false);
@@ -1880,6 +1880,20 @@ var CPD_INFO = {
 };
 
 
+// Auto-refresh date when returning to the tab (prevents stale-date lockout across midnight)
+function refreshDateIfChanged(){
+  var n=new Date();
+  var freshStr=n.getFullYear()+'-'+pad(n.getMonth()+1)+'-'+pad(n.getDate());
+  if(freshStr!==TODAY.str){
+    _now=n;
+    TODAY.str=freshStr;
+    TODAY.day=DAYS[n.getDay()];
+    TODAY.lbl=n.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+    if(S.loaded)render(false);
+  }
+}
+document.addEventListener('visibilitychange',function(){if(!document.hidden)refreshDateIfChanged();});
+window.addEventListener('focus',refreshDateIfChanged);
 load();
 
 
