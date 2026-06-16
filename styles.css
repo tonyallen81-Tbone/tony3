@@ -275,3 +275,17 @@ textarea{resize:none}
 .rat-ev .rat-grade{font-family:var(--mono);font-weight:700;color:var(--ac);font-size:12px}
 .rat-flag{background:rgba(255,180,0,.07);border-radius:4px;padding:.3rem .4rem;border-left:2px solid rgba(255,180,0,.5)}
 .rat-flag .rat-lbl{color:rgba(255,180,0,.85)}
+
+/* ── Rationale dropdown ──────────────────────────────────────────────────── */
+.rat-wrap{width:100%}
+.rat-btn{display:flex;align-items:center;justify-content:space-between;width:100%;background:none;border:none;padding:.3rem 0 .3rem .25rem;font-size:11px;color:var(--tx3);cursor:pointer;gap:.25rem;-webkit-tap-highlight-color:transparent}
+.rat-btn span{font-family:var(--mono);letter-spacing:.02em}
+.rat-btn i{font-size:11px;flex-shrink:0;transition:transform .15s}
+.rat-btn:active{opacity:.7}
+.rat-panel{background:var(--bg2);border-radius:6px;padding:.55rem .65rem;margin:.15rem 0 .35rem;border-left:2.5px solid var(--ac)}
+.rat-sec{font-size:11.5px;color:var(--tx2);line-height:1.5;margin-bottom:.4rem}
+.rat-sec:last-child{margin-bottom:0}
+.rat-lbl{display:block;font-size:10px;color:var(--tx3);font-family:var(--mono);font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin-bottom:.15rem}
+.rat-ev .rat-grade{font-family:var(--mono);font-weight:700;color:var(--ac);font-size:12px}
+.rat-flag{background:rgba(255,180,0,.07);border-radius:4px;padding:.3rem .4rem;border-left:2px solid rgba(255,180,0,.5)}
+.rat-flag .rat-lbl{color:rgba(255,180,0,.85)}
